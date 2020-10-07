@@ -18,7 +18,46 @@
  /****请在此补全所有flex的模式与动作  start******/
  //STUDENT TO DO
 
-. {return ERROR;} 
+\+ { return ADD;}
+\- {return SUB;}
+\* {return MUL;}
+\/ {return DIV;}
+\< {return LT;}
+\<\= {return LTE;}
+\> {return GT;}
+\>\= {return GTE;}
+\=\= {return EQ;}
+\!\= {return NEQ;}
+\= {return ASSIN;}
+
+; {return SEMICOLON;}
+, {return COMMA;}
+
+\( {return LPARENTHESE;}
+\) {return RPARENTHESE;}
+\[ {return LBRACKET;}
+\] {return RBRACKET;}
+\{ {return LBRACE;}
+\} {return RBRACE;}
+
+else {return ELSE;}
+if {return IF;}
+int {return INT;}
+float {return FLOAT;}
+return {return RETURN;}
+void {return VOID;}
+while {return WHILE;}
+
+[a-zA-Z][a-zA-Z0-9]* {return IDENTIFIER;}
+[1-9][0-9]*|[0] {return INTEGER;}
+([1-9][0-9]*|[0])[.][0-9]*([eE][+-]?[0-9]*|[0])?f? {return FLOATPOINT;}
+\[\] {return ARRAY;}
+
+
+[\n] {return EOL;}
+"/*"[^\*]*(\*[\*]*[^\/\*][^\*]*)*[\*]*"*/" {return COMMENT;}
+[ \r\t] {return BLANK;}
+. {return ERROR;}
 
 
 
@@ -41,16 +80,36 @@ void analyzer(char* input_file, Token_Node* token_stream){
 
 	int token;
 	int index = 0;
+	pos_end = pos_start = 1;
+	int count = 0,lenen = 0,i=0;
 
 	while(token = yylex()){
 		switch(token){
 			case COMMENT: 
 				//STUDENT TO DO
+				pos_start += yyleng;
+				count = 0;
+				lenen = 0;
+				for(i=0; i < yyleng; i++){
+					if(yytext[i] == '\n'){
+						count++;
+						lenen = yyleng - i;			
+					}
+				}
+				if(count){
+					lines +=count;
+					pos_start = pos_end = lenen;
+				}
+				break;
+			
 			case BLANK:
 				//STUDENT TO DO	
+				pos_start += yyleng;
 				break;
 			case EOL:
 				//STUDENT TO DO
+				lines++;
+				pos_start = pos_end = 1;
 				break;
 			case ERROR:
 				printf("[ERR]: unable to analysize %s at %d line, from %d to %d\n", yytext, lines, pos_start, pos_end);
@@ -60,11 +119,13 @@ void analyzer(char* input_file, Token_Node* token_stream){
 				} else {
 					strcpy(token_stream[index].text, yytext);
 				}
+				pos_end = pos_start + yyleng;
 				token_stream[index].token = token;
 				token_stream[index].lines = lines;
 				token_stream[index].pos_start = pos_start;
 				token_stream[index].pos_end = pos_end;
 				index++;
+				pos_start = pos_end;
 				if (index >= MAX_NUM_TOKEN_NODE){
 					printf("%d has too many tokens (> %d)", input_file, MAX_NUM_TOKEN_NODE);
 					exit(1);
