@@ -22,7 +22,7 @@ asdfadf*/  int main()
 
 ### 1.运算符处理
 
-```c
+```txt
 \+ { return ADD;}
 \- {return SUB;}
 \* {return MUL;}
@@ -40,7 +40,7 @@ asdfadf*/  int main()
 
 ### 2. 符号处理
 
-```c
+```txt
 ; {return SEMICOLON;}
 , {return COMMA;}
 
@@ -56,7 +56,7 @@ asdfadf*/  int main()
 
 ### 3.关键字处理
 
-```c
+```txt
 else {return ELSE;}
 if {return IF;}
 int {return INT;}
@@ -70,7 +70,7 @@ while {return WHILE;}
 
 ### 4.ID & NUM
 
-```c
+```txt
 [a-zA-Z][a-zA-Z]* {return IDENTIFIER;}
 [0-9][0-9]* {return INTEGER;}
 [0-9][0-9]*[.]|[0-9]*[.][0-9][0-9]* {return FLOATPOINT;}
@@ -81,7 +81,7 @@ while {return WHILE;}
 
 ### 5.其他
 
-```c
+```txt
 [\n] {return EOL;}
 "/*"[^\*]*(\*[\*]*[^\/\*][^\*]*)*[\*]*"*/" {return COMMENT;}
 [ \r\t] {return BLANK;}
@@ -94,7 +94,13 @@ while {return WHILE;}
 
 这些计算我统一在处理正则返回后处理，分别是遇到注释，遇到空格等，遇到换行，其余情况下的处理。
 
-遇到注释时，
+遇到注释时，更新pos_start += yyleng，然后遍历整个注释串，统计换行符个数count并计算出最后一行注释的长度：为lenen-1， 然后如果注释中有换行，就将pos_start设置为lenen，同时lines要加count，否则仍为yyleng且行号不变。
+
+遇到BLANK时，pos_start += yyleng;
+
+遇到EOL时：lines++;  pos_start = pos_end = 1;
+
+其他情况：更新token_stream前：pos_end = pos_start + yyleng;    然后更新token_stream，之后设置pos_start = pos_end;
 
 ```c
 	int token;
@@ -160,7 +166,7 @@ while {return WHILE;}
 
 ## 实验结果验证
 
-### shell 脚本一次性验证六个测试
+### shell 脚本验证六个测试
 
 ```shell
 cd build;
@@ -175,6 +181,10 @@ diff tests/lab1/TA_token/5.tokens tests/lab1/token/5.tokens;
 diff tests/lab1/TA_token/6.tokens tests/lab1/token/6.tokens;
 echo "Finished";
 ```
+
+
+
+
 
 
 
