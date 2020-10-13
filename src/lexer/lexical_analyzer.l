@@ -48,9 +48,9 @@ return {return RETURN;}
 void {return VOID;}
 while {return WHILE;}
 
-[a-zA-Z][a-zA-Z0-9]* {return IDENTIFIER;}
-[1-9][0-9]*|[0] {return INTEGER;}
-([1-9][0-9]*|[0])[.][0-9]*([eE][+-]?[0-9]*|[0])?f? {return FLOATPOINT;}
+[a-zA-Z][a-zA-Z]* {return IDENTIFIER;}
+[0-9][0-9]* {return INTEGER;}
+[0-9][0-9]*[.]|[0-9]*[.][0-9][0-9]* {return FLOATPOINT;}
 \[\] {return ARRAY;}
 
 
