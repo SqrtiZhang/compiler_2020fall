@@ -6,6 +6,9 @@
 
 #include "lexical_analyzer.h"
 
+int lines;
+int pos_start;
+int pos_end;
 
 /*****************声明和选项设置  end*****************/
 
@@ -68,7 +71,7 @@ while {return WHILE;}
 
 /// \brief analysize a *.cminus file
 ///
-///	\param input_file, 需要分析的文件路径
+/// \param input_file, 需要分析的文件路径
 /// \param token stream, Token_Node结构体数组，用于存储分析结果，具体定义参考lexical_analyer.h
 
 void analyzer(char* input_file, Token_Node* token_stream){
@@ -127,7 +130,7 @@ void analyzer(char* input_file, Token_Node* token_stream){
 				index++;
 				pos_start = pos_end;
 				if (index >= MAX_NUM_TOKEN_NODE){
-					printf("%d has too many tokens (> %d)", input_file, MAX_NUM_TOKEN_NODE);
+					printf("%s has too many tokens (> %d)", input_file, MAX_NUM_TOKEN_NODE);
 					exit(1);
 				}
 		}
