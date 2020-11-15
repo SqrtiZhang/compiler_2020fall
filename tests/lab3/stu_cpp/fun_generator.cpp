@@ -22,7 +22,7 @@
 
 int main(){
 
-    auto module = new Module("assign");
+    auto module = new Module("fun");
     auto builder = new IRBuilder(nullptr, module);
     Type *Int32Type = Type::get_int32_type(module);
 

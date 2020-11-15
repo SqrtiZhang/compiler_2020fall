@@ -43,7 +43,7 @@ int main(){
     auto mul = builder->create_imul(a0load, CONST_INT(2));
     builder->create_store(mul, a1GEP);
     builder->create_ret(mul);
-
+    // 输出中间代码
     std::cout << module->print();
     delete module;
     return 0;
