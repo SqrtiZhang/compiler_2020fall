@@ -11,6 +11,10 @@
 // to store state
 Value* Expression;
 
+int current_number;
+float current_float;
+CminusType current_type;
+
 /*
  * use CMinusfBuilder::Scope to construct scopes
  * scope.enter: enter a new scope
@@ -20,31 +24,55 @@ Value* Expression;
  */
 
 void CminusfBuilder::visit(ASTProgram &node) {
-    std::cout<<"test1"<<std::endl;
+    std::cout<<"test9"<<std::endl;
     for(auto decl: node.declarations){
         decl->accept(*this);
     }
+    scope.exit();
 }
 
 void CminusfBuilder::visit(ASTNum &node) { 
-    
+    current_type = node.type;
+    if(current_type == TYPE_INT)
+        current_number = node.i_val;
+    else if(current_type == TYPE_FLOAT)
+        current_number = node.i_val;
 }
 
 void CminusfBuilder::visit(ASTVarDeclaration &node) { 
-    std::cout<<"test2"<<std::endl;
-    
-    if(node.num != nullptr){
-        // when the var is a array
-        Type *Int32Type = Type::get_int32_type(module.get());
-        std::cout<<node.num->i_val<<std::endl;
-        auto *arraytype = ArrayType::get(Int32Type, node.num->i_val);
-        auto aalloc = builder->create_alloca(arraytype);
+    Type* node_type;
+    Type* node_value_type;
 
-    }else{
-        // the var is not a array 
-        Type *Int32Type = Type::get_int32_type(module.get());
-        auto valloc = builder->create_alloca(Int32Type);
+    if(node.type == TYPE_INT)
+        node_value_type = Type::get_int32_type(module.get());
+    else if(node.type == TYPE_FLOAT)
+        node_value_type = Type::get_float_type(module.get()); 
+
+    if(node.num != nullptr)
+    {
+        // when the var is a array
+        node.num->accept(*this);
+        node_type = ArrayType::get(node_value_type, node.num->i_val);
     }
+    else
+    {
+        // the var is not a array 
+        node_type = node_value_type;
+    }
+
+    if(scope.in_global())
+    {
+        //TODO: verify global
+        auto *global_var = new GlobalVariable(node.id, module.get(), node_type, false);
+        scope.push(node.id, global_var);
+    }
+    else
+    {
+        auto node_alloca = builder->create_alloca(node_type);
+        scope.push(node.id, node_alloca);
+    }
+    
+
 }
 
 void CminusfBuilder::visit(ASTFunDeclaration &node) { 
