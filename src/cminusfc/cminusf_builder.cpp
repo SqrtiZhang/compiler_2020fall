@@ -9,7 +9,16 @@
 
 // You can define global variables here
 // to store state
-Value* Expression;
+
+// to be used in while, if and return statements
+// Value* Expression;
+
+int current_number;
+float current_float;
+CminusType current_type;
+
+Function* current_func;
+BasicBlock* current_bb; 
 
 /*
  * use CMinusfBuilder::Scope to construct scopes
@@ -20,31 +29,55 @@ Value* Expression;
  */
 
 void CminusfBuilder::visit(ASTProgram &node) {
-    std::cout<<"test1"<<std::endl;
+    std::cout<<"test9"<<std::endl;
     for(auto decl: node.declarations){
         decl->accept(*this);
     }
+    scope.exit();
 }
 
 void CminusfBuilder::visit(ASTNum &node) { 
-    
+    current_type = node.type;
+    if(current_type == TYPE_INT)
+        current_number = node.i_val;
+    else if(current_type == TYPE_FLOAT)
+        current_number = node.f_val;
 }
 
 void CminusfBuilder::visit(ASTVarDeclaration &node) { 
-    std::cout<<"test2"<<std::endl;
-    
-    if(node.num != nullptr){
-        // when the var is a array
-        Type *Int32Type = Type::get_int32_type(module.get());
-        std::cout<<node.num->i_val<<std::endl;
-        auto *arraytype = ArrayType::get(Int32Type, node.num->i_val);
-        auto aalloc = builder->create_alloca(arraytype);
+    Type* node_type;
+    Type* node_value_type;
 
-    }else{
-        // the var is not a array 
-        Type *Int32Type = Type::get_int32_type(module.get());
-        auto valloc = builder->create_alloca(Int32Type);
+    if(node.type == TYPE_INT)
+        node_value_type = Type::get_int32_type(module.get());
+    else if(node.type == TYPE_FLOAT)
+        node_value_type = Type::get_float_type(module.get()); 
+
+    if(node.num != nullptr)
+    {
+        // when the var is a array
+        node.num->accept(*this);
+        node_type = ArrayType::get(node_value_type, node.num->i_val);
     }
+    else
+    {
+        // the var is not a array 
+        node_type = node_value_type;
+    }
+
+    if(scope.in_global())
+    {
+        //TODO: verify global
+        auto *global_var = GlobalVariable::create(node.id, module.get(), node_type, false, nullptr);
+        scope.push(node.id, global_var);
+    }
+    else
+    {
+        auto node_alloca = builder->create_alloca(node_type);
+        scope.push(node.id, node_alloca);
+    }
+    
+
 }
 
 void CminusfBuilder::visit(ASTFunDeclaration &node) { 
@@ -67,22 +100,89 @@ void CminusfBuilder::visit(ASTCompoundStmt &node) {
     }
 }
 
-void CminusfBuilder::visit(ASTExpressionStmt &node) { }
+
+void CminusfBuilder::visit(ASTExpressionStmt &node) {
+    
+ }
 
 void CminusfBuilder::visit(ASTSelectionStmt &node) { }
 
-void CminusfBuilder::visit(ASTIterationStmt &node) { }
 
-void CminusfBuilder::visit(ASTReturnStmt &node) { }
 
-void CminusfBuilder::visit(ASTVar &node) { }
 
-void CminusfBuilder::visit(ASTAssignExpression &node) { }
+void CminusfBuilder::visit(ASTIterationStmt &node) {
+    // the iteration-stmt
 
-void CminusfBuilder::visit(ASTSimpleExpression &node) { }
+    // create three bb: compare bb, while_body bb, end bb.
+    auto cmp_bb = BasicBlock::create(module.get(), "cmp_bb", current_func);
+    auto while_body_bb = BasicBlock::create(module.get(), "while_body_bb", current_func);
+    auto end_bb = BasicBlock::create(module.get(), "end_bb", current_func);
 
-void CminusfBuilder::visit(ASTAdditiveExpression &node) { }
+    // br to cmp_bb
+    builder->create_br(cmp_bb);
 
-void CminusfBuilder::visit(ASTTerm &node) { }
+    // cmp_bb
+    builder->set_insert_point(cmp_bb);
+    current_bb = cmp_bb;
+    // enter the expression node
+    node.expression->accept(*this);
+    //TODO remember to push the cmp value in the expression node
+    auto cmp = scope.find("cmp"); // find the while_expression value
+    builder->create_cond_br(cmp, while_body_bb, end_bb);
 
-void CminusfBuilder::visit(ASTCall &node) { }
+    // while_body
+    builder->set_insert_point(while_body_bb);
+    current_bb = while_body_bb;
+    // enter the statement node
+    node.statement->accept(*this);
+    // jump to the cmp bb, it's a loop
+    builder->create_br(cmp_bb);
+    //TODO consider the return-stmt inside the while bb
+    // end_bb
+    builder->set_insert_point(end_bb);
+    current_bb = end_bb;
+
+ }
+
+void CminusfBuilder::visit(ASTReturnStmt &node) {
+    if(node.expression){// return-stmt->return expression;
+        node.expression->accept(*this);
+        //TODO consider to bind the ret_value when visit expression-stmt node
+        auto ret_var = scope.find("ret_value");
+        builder->create_ret(ret_var);
+    }else{ // return-stmt->return;
+        builder->create_ret(nullptr);
+    }
+ }
+
+void CminusfBuilder::visit(ASTVar &node) { 
+    if(node.expression){
+        // var->ID [expression]
+
+    }else{
+        // var->ID
+    }
+}
+
+void CminusfBuilder::visit(ASTAssignExpression &node) {
+    // expression->var=expression | simple-expression
+    
+ }
+
+void CminusfBuilder::visit(ASTSimpleExpression &node) {
+    // simple-expression→additive-expression relop additive-expression 
+    // ∣ additive-expression
+
+ }
+
+void CminusfBuilder::visit(ASTAdditiveExpression &node) {
+    // additive-expression→additive-expression addop term ∣ term
+ }
+
+void CminusfBuilder::visit(ASTTerm &node) {
+    // term→term mulop factor ∣ factor
+ }
+
+void CminusfBuilder::visit(ASTCall &node) {
+    // call->ID ( args )
+ }
