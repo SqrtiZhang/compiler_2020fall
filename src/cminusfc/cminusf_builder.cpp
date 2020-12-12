@@ -34,6 +34,7 @@ Value* return_alloca;
 
 void CminusfBuilder::visit(ASTProgram &node) {
     LOG(INFO) << "Program";
+
     for(auto decl: node.declarations){
         decl->accept(*this);
     }
@@ -49,7 +50,7 @@ void CminusfBuilder::visit(ASTNum &node) {
     }
         
     else if(current_type == TYPE_FLOAT)
-        current_number = node.f_val;
+        current_number = node.i_val;
         Expression = ConstantFP::get(current_number, module.get());
 }
 
@@ -277,7 +278,7 @@ void CminusfBuilder::visit(ASTReturnStmt &node) {
         auto ret_var = Expression;
         builder->create_ret(ret_var);
     }else{ // return-stmt->return;
-        builder->create_void_ret();
+            ;
     }
  }
 
