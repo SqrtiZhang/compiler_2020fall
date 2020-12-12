@@ -1,5 +1,5 @@
 #include "cminusf_builder.hpp"
-
+#include "logging.hpp"
 // use these macros to get constant value
 #define CONST_FP(num) \
     ConstantFP::get((float)num, module.get())
@@ -33,7 +33,7 @@ Value* return_alloca;
  */
 
 void CminusfBuilder::visit(ASTProgram &node) {
-    std::cout<<"test9"<<std::endl;
+    LOG(INFO) << "Program";
     for(auto decl: node.declarations){
         decl->accept(*this);
     }
@@ -41,6 +41,7 @@ void CminusfBuilder::visit(ASTProgram &node) {
 }
 
 void CminusfBuilder::visit(ASTNum &node) { 
+    LOG(INFO) << "NUM";
     current_type = node.type;
     if(current_type == TYPE_INT){
         current_number = node.i_val;
@@ -53,6 +54,7 @@ void CminusfBuilder::visit(ASTNum &node) {
 }
 
 void CminusfBuilder::visit(ASTVarDeclaration &node) { 
+    LOG(INFO) << "VarDeclaration";
     Type* node_type;
     Type* node_value_type;
 
@@ -90,6 +92,7 @@ void CminusfBuilder::visit(ASTVarDeclaration &node) {
 }
 
 void CminusfBuilder::visit(ASTFunDeclaration &node) { 
+    LOG(INFO) << "FunDeclaration";
     std::vector<Type*> Params;
     for(auto param: node.params){
         if(param->isarray){
@@ -184,6 +187,7 @@ void CminusfBuilder::visit(ASTParam &node) {
  }
 
 void CminusfBuilder::visit(ASTCompoundStmt &node) { 
+    LOG(INFO) << "Compoundstmt";
     // {}内的变量要有作用域
     scope.enter();
     
@@ -201,12 +205,14 @@ void CminusfBuilder::visit(ASTCompoundStmt &node) {
 
 
 void CminusfBuilder::visit(ASTExpressionStmt &node) {
+    LOG(INFO) << "ExpressionStmt";
     if (node.expression != nullptr)
         node.expression->accept(*this);
     
  }
 
 void CminusfBuilder::visit(ASTSelectionStmt &node) { 
+    LOG(INFO) << "SelectionStmt";
     node.expression->accept(*this); // set global value Expression to transfer the value
     auto trueBB = BasicBlock::create(module.get(), "trueBB", current_func);
     auto falseBB = BasicBlock::create(module.get(), "falseBB", current_func);
@@ -231,7 +237,7 @@ void CminusfBuilder::visit(ASTSelectionStmt &node) {
 
 void CminusfBuilder::visit(ASTIterationStmt &node) {
     // the iteration-stmt
-
+    LOG(INFO) << "Iterationstmt";
     // create three bb: compare bb, while_body bb, end bb.
     auto cmp_bb = BasicBlock::create(module.get(), "cmp_bb", current_func);
     auto while_body_bb = BasicBlock::create(module.get(), "while_body_bb", current_func);
@@ -264,18 +270,19 @@ void CminusfBuilder::visit(ASTIterationStmt &node) {
  }
 
 void CminusfBuilder::visit(ASTReturnStmt &node) {
+    LOG(INFO) << "returnstmt";
     if(node.expression){// return-stmt->return expression;
         node.expression->accept(*this);
         // global value, seted in accept()
         auto ret_var = Expression;
         builder->create_ret(ret_var);
     }else{ // return-stmt->return;
-        builder->create_ret(nullptr);
+        builder->create_void_ret();
     }
  }
 
 void CminusfBuilder::visit(ASTVar &node) { 
-
+    LOG(INFO) << "Var";
     auto x = scope.find(node.id); // find the alloca
     // var->ID | ID [expression]
     if (node.expression != nullptr) {
@@ -295,6 +302,7 @@ void CminusfBuilder::visit(ASTVar &node) {
 }
 
 void CminusfBuilder::visit(ASTAssignExpression &node) {
+    LOG(INFO) << "assignexpression";
     // expression->var=expression | simple-expression
     // assign or call
     Value* left_alloca;
@@ -306,11 +314,12 @@ void CminusfBuilder::visit(ASTAssignExpression &node) {
 
     node.expression->accept(*this);
     
-    auto right_value = builder->create_load(Expression); // get the value of the expression
+    right_value = builder->create_load(Expression); // get the value of the expression
     builder->create_store(right_value, left_alloca); // store the value in the addression
  }
 
 void CminusfBuilder::visit(ASTSimpleExpression &node) {
+    LOG(INFO) << "simpleExpression";
     // simple-expression→additive-expression relop additive-expression 
     // ∣ additive-expression
     node.additive_expression_l->accept(*this);
@@ -342,6 +351,7 @@ void CminusfBuilder::visit(ASTSimpleExpression &node) {
  }
 
 void CminusfBuilder::visit(ASTAdditiveExpression &node) {
+    LOG(INFO) << "additiveexpression";
     // additive-expression→additive-expression addop term ∣ term
     if (node.additive_expression == nullptr) {
         node.term->accept(*this); 
@@ -365,6 +375,7 @@ void CminusfBuilder::visit(ASTAdditiveExpression &node) {
  }
 
 void CminusfBuilder::visit(ASTTerm &node) {
+    LOG(INFO) << "term";
     // term→term mulop factor ∣ factor
     if (node.term == nullptr) {
         node.factor->accept(*this);
@@ -385,6 +396,7 @@ void CminusfBuilder::visit(ASTTerm &node) {
  }
 
 void CminusfBuilder::visit(ASTCall &node) {
+    LOG(INFO) << "call";
     // call->ID ( args )
     auto func = scope.find(node.id);
     if(func == nullptr){
