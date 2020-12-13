@@ -324,8 +324,6 @@ void CminusfBuilder::visit(ASTVar &node) {
     LOG(INFO) << "Var";
     auto x = scope.find(node.id); // find the alloca
     auto this_mode = var_mode;
-    //TODO: only imply load on no array
-    // var->ID | ID [expression]
     std::cout<<"var_mode"<<var_mode<<std::endl;
     if (node.expression != nullptr) {
         std::cout << "[]" << std::endl;
@@ -374,8 +372,12 @@ void CminusfBuilder::visit(ASTAssignExpression &node) {
     if(left_type < right_type)  //only deal with int x = float y
     {
         auto num_value = ((ConstantFP *)current_value)->get_value();
-        //left_alloca = ConstantInt::get( num_value, module.get());
         right_value = ConstantInt::get( num_value, module.get());
+    }
+    else if(left_type > right_type)
+    {
+        auto num_value = ((ConstantInt *)current_value)->get_value();
+        right_value = ConstantFP::get( num_value, module.get());
     }
     builder->create_store(right_value, left_alloca); // store the value in the addression
  }
