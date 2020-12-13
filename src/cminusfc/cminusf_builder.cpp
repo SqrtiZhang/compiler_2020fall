@@ -438,19 +438,63 @@ void CminusfBuilder::visit(ASTSimpleExpression &node) {
     } else {
         node.additive_expression_r->accept(*this);
         Value* right = current_value;
-        if (node.op == OP_LT) {
-            current_value = builder->create_icmp_lt(left, right);
-        } else if (node.op == OP_LE) {
-            current_value = builder->create_icmp_le(left, right);
-        } else if (node.op == OP_GE) {
-            current_value = builder->create_icmp_ge(left, right);
-        } else if (node.op == OP_GT) {
-            current_value = builder->create_icmp_gt(left, right);
-        } else if (node.op == OP_EQ) {
-            current_value = builder->create_icmp_eq(left, right);
-        } else if (node.op == OP_NEQ) {
-            current_value = builder->create_icmp_ne(left, right);
-        } else {
+
+        auto left_ty = (left->get_type()->get_type_id());
+        auto right_ty = (right->get_type()->get_type_id());
+
+        if(node.op == OP_LT || node.op == OP_LE || node.op == OP_GE || 
+            node.op == OP_GT || node.op == OP_EQ || node.op == OP_NEQ)
+        {
+            if(left_ty > right_ty)
+                right = CastRightValue(left->get_type(), right, builder);
+            else if(left_ty < right_ty)
+                left = CastRightValue(right->get_type(), left, builder);
+        }
+
+        if (node.op == OP_LT) 
+        {
+            if(left_ty != right_ty)
+                current_value = builder->create_fcmp_lt(left, right);
+            else
+                current_value = builder->create_icmp_lt(left, right);
+        } 
+        else if (node.op == OP_LE) 
+        {
+            if(left_ty != right_ty)
+                current_value = builder->create_fcmp_le(left, right);
+            else
+                current_value = builder->create_icmp_le(left, right);
+        } 
+        else if (node.op == OP_GE) 
+        {
+            if(left_ty != right_ty)
+                current_value = builder->create_fcmp_ge(left, right);
+            else
+                current_value = builder->create_icmp_ge(left, right);
+        } 
+        else if (node.op == OP_GT) 
+        {
+            if(left_ty != right_ty)
+                current_value = builder->create_fcmp_gt(left, right);
+            else
+                current_value = builder->create_icmp_gt(left, right);
+        } 
+        else if (node.op == OP_EQ) 
+        {
+            if(left_ty != right_ty)
+                current_value = builder->create_fcmp_eq(left, right);
+            else
+                current_value = builder->create_icmp_eq(left, right);
+        } 
+        else if (node.op == OP_NEQ)
+        {
+            if(left_ty != right_ty)
+                current_value = builder->create_fcmp_lt(left, right);
+            else
+                current_value = builder->create_icmp_lt(left, right);
+        } 
+        else 
+        {
             std::abort();
         }
         std::cout << std::endl;
