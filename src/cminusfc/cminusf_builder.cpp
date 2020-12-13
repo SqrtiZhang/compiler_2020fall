@@ -209,8 +209,10 @@ void CminusfBuilder::visit(ASTCompoundStmt &node) {
 
     for(auto stmt: node.statement_list){
         stmt->accept(*this);
+        if(builder->get_insert_block()->get_terminator() != nullptr){
+            break;
+        }
     }
-
     scope.exit();
 
 }
@@ -228,19 +230,33 @@ void CminusfBuilder::visit(ASTSelectionStmt &node) {
     node.expression->accept(*this); // set global value Expression to transfer the value
     auto trueBB = BasicBlock::create(module.get(), "trueBB", current_func);
     auto falseBB = BasicBlock::create(module.get(), "falseBB", current_func);
-    auto retBB = BasicBlock::create(module.get(), "", current_func);
-    auto br = builder->create_cond_br(Expression, trueBB, falseBB);
-    
+    auto retBB = BasicBlock::create(module.get(), "retBB", current_func);
+    if(node.else_statement != nullptr)
+        auto br = builder->create_cond_br(Expression, trueBB, falseBB);
+    else{
+        auto br = builder->create_cond_br(Expression, trueBB, retBB);
+    }
     builder->set_insert_point(trueBB);
     node.if_statement->accept(*this);
-    builder->create_br(retBB);
+    if(builder->get_insert_block()->get_terminator() == nullptr){
+        builder->create_br(retBB);
+    }    
 
-    builder->set_insert_point(falseBB);
     LOG(DEBUG) << "before enter else";
-    if (node.else_statement != nullptr)
+    if (node.else_statement != nullptr){
+        builder->set_insert_point(falseBB);
+
+         LOG(DEBUG) << "falseBB";
         node.else_statement->accept(*this);
+        if(builder->get_insert_block()->get_terminator() == nullptr){
+            builder->create_br(retBB);
+        }
+    }else{
+        builder->set_insert_point(falseBB);
+        builder->create_br(retBB);
+    }
     LOG(DEBUG) << "after enter else";
-    builder->create_br(retBB);
+
 
     builder->set_insert_point(retBB);
 
@@ -275,8 +291,9 @@ void CminusfBuilder::visit(ASTIterationStmt &node) {
     // enter the statement node
     node.statement->accept(*this);
     // jump to the cmp bb, it's a loop
-    builder->create_br(cmp_bb);
-    //TODO consider the return-stmt inside the while bb
+    if(builder->get_insert_block()->get_terminator() == nullptr){
+        builder->create_br(cmp_bb);
+    }
     // end_bb
     builder->set_insert_point(end_bb);
     current_bb = end_bb;
@@ -358,6 +375,9 @@ void CminusfBuilder::visit(ASTSimpleExpression &node) {
         left = builder->create_load(Expression);
         node.additive_expression_r->accept(*this);
         Value* right = Expression;
+        if(right->get_type()->is_pointer_type()){
+            right = builder->create_load(right);
+        }
         
         if (node.op == OP_LT) {
             Expression = builder->create_icmp_lt(left, right);
@@ -388,8 +408,14 @@ void CminusfBuilder::visit(ASTAdditiveExpression &node) {
     } else {
         node.additive_expression->accept(*this);
         Value* left = Expression;
+        if(left->get_type()->is_pointer_type()){
+            left = builder->create_load(left);
+        }
         node.term->accept(*this); 
         Value* right = Expression;
+        if(right->get_type()->is_pointer_type()){
+            right = builder->create_load(right);
+        }
 
         if (node.op == OP_PLUS) {
             Expression = builder->create_iadd(left, right);
@@ -411,8 +437,14 @@ void CminusfBuilder::visit(ASTTerm &node) {
     } else {
         node.term->accept(*this);
         Value* left = Expression;
+        if(left->get_type()->is_pointer_type()){
+            left = builder->create_load(left);
+        }
         node.factor->accept(*this);
         Value* right = Expression;
+        if(right->get_type()->is_pointer_type()){
+            right = builder->create_load(right);
+        }
         if (node.op == OP_MUL) {
             Expression = builder->create_imul(left, right);
         } else if (node.op == OP_DIV) {
