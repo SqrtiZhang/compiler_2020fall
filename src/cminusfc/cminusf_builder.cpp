@@ -48,10 +48,8 @@ void CminusfBuilder::visit(ASTNum &node) {
         current_number = node.i_val;
         Expression = ConstantInt::get(current_number, module.get());
     }
-        
     else if(current_type == TYPE_FLOAT)
-        current_number = node.i_val;
-        Expression = ConstantFP::get(current_number, module.get());
+        Expression = ConstantFP::get(node.f_val, module.get());
 }
 
 void CminusfBuilder::visit(ASTVarDeclaration &node) { 
@@ -327,7 +325,7 @@ void CminusfBuilder::visit(ASTSimpleExpression &node) {
     Value* left = Expression;
 
     if (node.additive_expression_r == nullptr) {
-        std::cout <<" "<< std::endl;
+        LOG(DEBUG) << "simpleExpression->additive-expression";
     } else {
         node.additive_expression_r->accept(*this);
         Value* right = Expression;
