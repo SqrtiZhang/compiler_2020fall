@@ -512,11 +512,30 @@ void CminusfBuilder::visit(ASTTerm &node) {
         Value* left = current_value;
         node.factor->accept(*this);
         Value* right = current_value;
-        if (node.op == OP_MUL) {
-            current_value = builder->create_imul(left, right);
-        } else if (node.op == OP_DIV) {
-            current_value = builder->create_isdiv(left, right);
-        } else {
+        auto left_ty = (left->get_type()->get_type_id());
+        auto right_ty = (right->get_type()->get_type_id());   
+        if(node.op == OP_MUL || node.op == OP_DIV)
+        {
+            if(left_ty > right_ty)
+                right = CastRightValue(left->get_type(), right, builder);
+            else if(left_ty < right_ty)
+                left = CastRightValue(right->get_type(), left, builder);
+        }
+        if (node.op == OP_MUL) 
+        {
+            if(left_ty != right_ty)
+                current_value = builder->create_fmul(left, right);
+            else
+                current_value = builder->create_imul(left, right);
+        } 
+        else if (node.op == OP_DIV) 
+        {
+            if(left_ty != right_ty)
+                current_value = builder->create_fdiv(left, right);
+            else
+                current_value = builder->create_isdiv(left, right);
+        } 
+        else {
             std::abort();
         }
     }
