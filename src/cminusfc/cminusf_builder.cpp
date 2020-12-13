@@ -24,10 +24,12 @@ Value* return_alloca;
 
 enum VarMode {STORE, LOAD} var_mode;
 
+//todo cast array
+/*
 Value* CastRightValue(Value* left, Value* right, IRBuilder* builder)
 {
     
-    auto left_type = (left->get_type())->get_pointer_element_type()->get_type_id();
+    auto left_type = ->get_type_id();
     auto right_type = (right->get_type())->get_type_id();
     
     Value* right_value;
@@ -38,7 +40,7 @@ Value* CastRightValue(Value* left, Value* right, IRBuilder* builder)
         right_value = builder->create_sitofp(right, (left->get_type()->get_pointer_element_type()));
     
     return right_value;
-}
+}*/
 
 Value* CastRightValue(Type* left, Value* right, IRBuilder* builder)
 {
@@ -350,11 +352,14 @@ void CminusfBuilder::visit(ASTIterationStmt &node) {
 
 void CminusfBuilder::visit(ASTReturnStmt &node) {
     LOG(INFO) << "returnstmt";
+    
     if(node.expression){// return-stmt->return expression;
+        
         node.expression->accept(*this);
         // global value, seted in accept()
         auto ret_var = current_value;
-        ret_var = CastRightValue(return_alloca, ret_var, builder);
+        //std::cout <<return_alloca->get_type()->get_type_id()<<std::endl;
+        ret_var = CastRightValue(return_alloca->get_type()->get_pointer_element_type(), ret_var, builder);
         builder->create_ret(ret_var);
     }else{ // return-stmt->return;
             ;
@@ -363,25 +368,55 @@ void CminusfBuilder::visit(ASTReturnStmt &node) {
 
 void CminusfBuilder::visit(ASTVar &node) { 
     LOG(INFO) << "Var";
-    auto x = scope.find(node.id); // find the alloca
+    
     auto this_mode = var_mode;
-    std::cout<<"var_mode"<<var_mode<<std::endl;
+    //std::cout<<"var_mode"<<var_mode<<std::endl;
     if (node.expression != nullptr) {
+        auto *x = scope.find(node.id); // find the al
         std::cout << "[]" << std::endl;
-        //
-        node.expression->accept(*this);
-        std::cout<<"type"<<current_value->get_type()->get_type_id()<<std::endl;
         
+        node.expression->accept(*this);
+        auto arrty = x->get_type();
+        var_mode = LOAD;
+
+        
+        if(arrty->is_pointer_type() && 
+           arrty->get_pointer_element_type()->is_array_type())
+            {
+                
+                 current_value = builder->create_gep(x, {ConstantInt::get(0, module.get()), current_value});
+            }
+           
+        else
+        {
+            auto index = current_value;
+            /******************Problem  test23*******************************/
+            current_value= builder->create_gep(x, {ConstantInt::get(0, module.get())});
+            //index = builder->create_load(x);
+            std::cout<<x->get_type()->get_type_id()<<std::endl;
+            //std::cout<<current_value->get_type()->get_type_id()<<std::endl;
+            current_value = builder->create_load(current_value);
+            
+            current_value = builder->create_gep(current_value, {ConstantInt::get(0, module.get()), index});
+        }
+        
+        /*
         if(!current_value->get_type()->is_pointer_type())
+        {
+            std::cout<<x->get_type()->get_type_id()<<std::endl;
             current_value = builder->create_gep(x, {ConstantInt::get(0, module.get()), current_value});
+            
+        }
+            
         else
         {
             auto index = builder->create_load(current_value);
             current_value = builder->create_gep(x, {ConstantInt::get(0, module.get()), index});
         }
-        
-        
+        std::cout<<"type"<<current_value->get_type()->get_type_id()<<std::endl;
+        */
     }else{
+        auto x = scope.find(node.id); // find the alloca
         // not a array
         //current_value = builder->create_load(current_value);
         current_value = x;
@@ -390,7 +425,7 @@ void CminusfBuilder::visit(ASTVar &node) {
         current_value = builder->create_load(current_value);
 }
 
-//todo var cast
+//Finish var cast
 //1. int a = float b; Finish
 //2. (int) return (float)a; Finish
 //3. fun(int) but use with fun(float) Finish
@@ -399,9 +434,11 @@ void CminusfBuilder::visit(ASTVar &node) {
 //    step2 a cmp b; Finish
 //5. (int) = (float)fun()
 
-//todo test a[4] = a[3]
+//Finish test a[4] = a[3]; Finish
 
 //todo test scope
+
+//todo add init var
 
 void CminusfBuilder::visit(ASTAssignExpression &node) {
     LOG(INFO) << "assignexpression";
@@ -415,14 +452,14 @@ void CminusfBuilder::visit(ASTAssignExpression &node) {
 
     node.var->accept(*this); // know the alloca from current_var
     
-    
+    //std::cout <<"rightvalue"<<std::endl;
     left_alloca = current_value; // find the address of the value
     
     node.expression->accept(*this);
     right_value = current_value;
-    //std::cout <<"rightvalue"<<right_value->get_value()<<std::endl;
-    right_value = CastRightValue(left_alloca, right_value, builder);
-  
+    //std::cout <<"rightvalue"<<std::endl;
+    right_value = CastRightValue(left_alloca->get_type()->get_pointer_element_type(), right_value, builder);
+    //std::cout <<"rightvalue"<<std::endl;
     builder->create_store(right_value, left_alloca); // store the value in the addression
  }
 //todo:while  return
