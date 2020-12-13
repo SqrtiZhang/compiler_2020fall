@@ -14,6 +14,7 @@
 Value* Expression;
 
 int current_number;
+bool want_change_type = false;
 float current_float;
 CminusType current_type;
 
@@ -46,10 +47,22 @@ void CminusfBuilder::visit(ASTNum &node) {
     current_type = node.type;
     if(current_type == TYPE_INT){
         current_number = node.i_val;
-        Expression = ConstantInt::get(current_number, module.get());
+        // type change 
+        if(want_change_type && current_var->get_type()->get_pointer_element_type()->is_float_type()){
+            Expression = ConstantFP::get((float)current_number, module.get());
+        }else{
+            Expression = ConstantInt::get(current_number, module.get());
+        }
+        
     }
-    else if(current_type == TYPE_FLOAT)
-        Expression = ConstantFP::get(node.f_val, module.get());
+    else if(current_type == TYPE_FLOAT){
+        if(want_change_type && current_var->get_type()->get_pointer_element_type()->is_integer_type()){
+            Expression = ConstantInt::get((int)(node.f_val), module.get());
+        }else{
+            Expression = ConstantFP::get(node.f_val, module.get());
+        }
+    }
+        
 }
 
 void CminusfBuilder::visit(ASTVarDeclaration &node) { 
@@ -223,8 +236,10 @@ void CminusfBuilder::visit(ASTSelectionStmt &node) {
     builder->create_br(retBB);
 
     builder->set_insert_point(falseBB);
+    LOG(DEBUG) << "before enter else";
     if (node.else_statement != nullptr)
         node.else_statement->accept(*this);
+    LOG(DEBUG) << "after enter else";
     builder->create_br(retBB);
 
     builder->set_insert_point(retBB);
@@ -274,6 +289,9 @@ void CminusfBuilder::visit(ASTReturnStmt &node) {
         node.expression->accept(*this);
         // global value, seted in accept()
         auto ret_var = Expression;
+        if(Expression->get_type()->is_pointer_type()){
+            ret_var = builder->create_load(Expression);
+        }
         builder->create_ret(ret_var);
     }else{ // return-stmt->return;
             ;
@@ -310,10 +328,19 @@ void CminusfBuilder::visit(ASTAssignExpression &node) {
     node.var->accept(*this); // know the alloca from current_var
     
     left_alloca = current_var; // find the address of the value
-
+    want_change_type = true;
     node.expression->accept(*this);
-    
-    right_value = builder->create_load(Expression); // get the value of the expression
+    if(Expression->get_type()->is_pointer_type()){
+        right_value = builder->create_load(Expression);;
+    }else{
+        // Expression is a constant
+        right_value = Expression;
+    }
+     // get the value of the expression
+    if(right_value->get_type()->is_float_type() && left_alloca->get_type()->is_integer_type()){
+
+        builder->create_store(right_value, left_alloca);
+    }
     builder->create_store(right_value, left_alloca); // store the value in the addression
  }
 
@@ -323,12 +350,15 @@ void CminusfBuilder::visit(ASTSimpleExpression &node) {
     // ∣ additive-expression
     node.additive_expression_l->accept(*this);
     Value* left = Expression;
+    
 
     if (node.additive_expression_r == nullptr) {
         LOG(DEBUG) << "simpleExpression->additive-expression";
     } else {
+        left = builder->create_load(Expression);
         node.additive_expression_r->accept(*this);
         Value* right = Expression;
+        
         if (node.op == OP_LT) {
             Expression = builder->create_icmp_lt(left, right);
         } else if (node.op == OP_LE) {
@@ -404,6 +434,8 @@ void CminusfBuilder::visit(ASTCall &node) {
         std::vector<Value*> args;
         for (auto arg: node.args) {
             arg->accept(*this);
+            if(Expression->get_type()->is_pointer_type())
+                Expression = builder->create_load(Expression);
             args.push_back(Expression);
         }
         Expression = builder->create_call(func, args);
