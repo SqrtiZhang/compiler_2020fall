@@ -51,7 +51,11 @@ void CminusfBuilder::visit(ASTNum &node) {
         std::cout<<current_value->get_type()->is_pointer_type()<<std::endl;
     }
     else if(current_type == TYPE_FLOAT)
+    {
         current_value = ConstantFP::get(node.f_val, module.get());
+        //std::cout << "FLOAT"<<std::endl;
+    }
+        
 }
 
 void CminusfBuilder::visit(ASTVarDeclaration &node) { 
@@ -313,15 +317,24 @@ void CminusfBuilder::visit(ASTAssignExpression &node) {
     Value* left_alloca;
     Value* right_value;
     Value* temp;
+
     node.var->accept(*this); // know the alloca from current_var
     
+    auto left_type = (current_value->get_type())->get_pointer_element_type()->get_type_id();
     left_alloca = current_value; // find the address of the value
-
+    
     node.expression->accept(*this);
     
-    //right_value = builder->create_load(current_value); // get the value of the expression
-    //std::cout << current_value->get_name()<<std::endl;
-    builder->create_store(current_value, left_alloca); // store the value in the addression
+    auto right_type = (current_value->get_type())->get_type_id();
+    right_value = current_value;
+
+    if(left_type < right_type)  //only deal with int x = float y
+    {
+        auto num_value = ((ConstantFP *)current_value)->get_value();
+        //left_alloca = ConstantInt::get( num_value, module.get());
+        right_value = ConstantInt::get( num_value, module.get());
+    }
+    builder->create_store(right_value, left_alloca); // store the value in the addression
  }
 
 void CminusfBuilder::visit(ASTSimpleExpression &node) {
