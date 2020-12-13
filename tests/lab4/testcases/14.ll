@@ -12,11 +12,12 @@ declare void @neg_idx_except()
 define i32 @main() {
 label.entry:
   %0 = alloca i32
-  %1 = alloca float
-  %2 = alloca i32
-  store i32 1, i32* %2
-  %3 = load i32, i32* %2
-  store float 0x0, float* %1
-  %4 = load i32, i32* %2
-  ret i32 %4
+  %1 = alloca i32
+  %2 = alloca float
+  store float 0x3ff99999a0000000, float* %2
+  %3 = load float, float* %2
+  %4 = fptosi float %3 to i32
+  store i32 %4, i32* %1
+  %5 = load i32, i32* %1
+  ret i32 %5
 }

@@ -349,6 +349,14 @@ void CminusfBuilder::visit(ASTVar &node) {
         current_value = builder->create_load(current_value);
 }
 
+//todo var cast
+//1. int a = float b; Finish
+//2. (int) return (float)a
+//3. fun(int) but use with fun(float)
+//4. (int) a op (float) b
+
+//todo test a[4] = a[3]
+
 void CminusfBuilder::visit(ASTAssignExpression &node) {
     LOG(INFO) << "assignexpression";
     var_mode = STORE;
@@ -367,17 +375,20 @@ void CminusfBuilder::visit(ASTAssignExpression &node) {
     
     auto right_type = (current_value->get_type())->get_type_id();
     right_value = current_value;
+    //std::cout <<"rightvalue"<<right_value->get_value()<<std::endl;
 
-    //todo deal float = int
+  
     if(left_type < right_type)  //only deal with int x = float y
     {
-        auto num_value = ((ConstantFP *)current_value)->get_value();
-        right_value = ConstantInt::get( num_value, module.get());
+        right_value = builder->create_fptosi(right_value, (left_alloca->get_type()->get_pointer_element_type()));
+        //auto num_value = ((ConstantFP *)current_value)->get_value();
+        //std::cout <<"num" <<num_value <<std::endl;
+        //right_value = ConstantInt::get( num_value, module.get());
     }
-    else if(left_type > right_type)
+    else if(left_type > right_type)// float x = int y
     {
-        auto num_value = ((ConstantInt *)current_value)->get_value();
-        right_value = ConstantFP::get( num_value, module.get());
+        
+        right_value = builder->create_sitofp(right_value, (left_alloca->get_type()->get_pointer_element_type()));
     }
     builder->create_store(right_value, left_alloca); // store the value in the addression
  }
