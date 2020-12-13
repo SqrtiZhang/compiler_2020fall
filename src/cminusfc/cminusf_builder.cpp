@@ -46,9 +46,9 @@ void CminusfBuilder::visit(ASTNum &node) {
     current_type = node.type;
     if(current_type == TYPE_INT){
         current_number = node.i_val;
-        std::cout<<current_number<<std::endl;
+        
         current_value = ConstantInt::get(current_number, module.get());
-        std::cout<<current_value->get_type()->is_pointer_type()<<std::endl;
+        
     }
     else if(current_type == TYPE_FLOAT)
     {
@@ -176,13 +176,17 @@ void CminusfBuilder::visit(ASTFunDeclaration &node) {
     }
     // visit the compound_stmt and store the ret value in the return_alloca
     node.compound_stmt->accept(*this);
-
-    if(node.type == TYPE_VOID){
-        builder->create_void_ret();
-    }else{
-        auto ret_load = builder->create_load(return_alloca);
-        builder->create_ret(ret_load);
+    std::cout<<'1'<<std::endl;
+    if(builder->get_insert_block()->get_terminator() == nullptr)
+    {
+        if(node.type == TYPE_VOID){
+            builder->create_void_ret();
+        }else{
+            auto ret_load = builder->create_load(return_alloca);
+            builder->create_ret(ret_load);
+        }
     }
+    
     // exit the scope of this function
     scope.exit();
 }
@@ -202,6 +206,9 @@ void CminusfBuilder::visit(ASTCompoundStmt &node) {
 
     for(auto stmt: node.statement_list){
         stmt->accept(*this);
+        if(builder->get_insert_block()->get_terminator() != nullptr)
+            break;
+
     }
 
     scope.exit();
@@ -217,23 +224,50 @@ void CminusfBuilder::visit(ASTExpressionStmt &node) {
  }
 
 void CminusfBuilder::visit(ASTSelectionStmt &node) { 
+
     LOG(INFO) << "SelectionStmt";
     node.expression->accept(*this); // set global value current_value to transfer the value
     auto trueBB = BasicBlock::create(module.get(), "trueBB", current_func);
-    auto falseBB = BasicBlock::create(module.get(), "falseBB", current_func);
-    auto retBB = BasicBlock::create(module.get(), "", current_func);
-    auto br = builder->create_cond_br(current_value, trueBB, falseBB);
-    
+    //auto falseBB = BasicBlock::create(module.get(), "falseBB", current_func);
+    //auto retBB = BasicBlock::create(module.get(), "retBB", current_func);
+    decltype(trueBB) falseBB = nullptr, retBB = nullptr;
+    bool need_new_block = false;
+    if(node.else_statement != nullptr)
+    {
+        falseBB = BasicBlock::create(module.get(), "falseBB", current_func);
+        //retBB = BasicBlock::create(module.get(), "retBB", current_func);
+        builder->create_cond_br(current_value, trueBB, falseBB);
+    }
+    else
+    {
+        retBB = BasicBlock::create(module.get(), "retBB", current_func);
+        builder->create_cond_br(current_value, trueBB, retBB);
+        need_new_block = true;
+    }
+
     builder->set_insert_point(trueBB);
     node.if_statement->accept(*this);
-    builder->create_br(retBB);
-
-    builder->set_insert_point(falseBB);
-    if (node.else_statement != nullptr)
+    if(builder->get_insert_block()->get_terminator() == nullptr)
+    {
+        need_new_block = true;
+        builder->create_br(retBB);
+    } 
+    if (node.else_statement != nullptr){
+        builder->set_insert_point(falseBB);
         node.else_statement->accept(*this);
-    builder->create_br(retBB);
-
-    builder->set_insert_point(retBB);
+        if(builder->get_insert_block()->get_terminator() == nullptr)
+        {
+            need_new_block = true;
+            builder->create_br(retBB);
+        }
+    }
+    if(need_new_block)
+    {
+        if(node.else_statement != nullptr)
+            retBB = BasicBlock::create(module.get(), "retBB", current_func);
+        builder->set_insert_point(retBB);
+    }
+        
 
 }
 
