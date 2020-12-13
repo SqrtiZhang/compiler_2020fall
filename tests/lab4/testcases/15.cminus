@@ -1,9 +1,15 @@
+int funa(void)
+{
+	return 2.5;
+}
+float funb(int a)
+{
+	return a;
+}
 int main(void) {
-    float a;
-    int b;
-    int c;
-    b = 1;
-    a = b;
-    c = a;
-    return c;
+int aa;
+float bb;
+aa = funa();
+bb = funb(aa);
+    return bb;
 }

@@ -24,6 +24,20 @@ Value* return_alloca;
 
 enum VarMode {STORE, LOAD} var_mode;
 
+Value* CastRightValue(Value* left, Value* right, IRBuilder* builder)
+{
+    auto left_type = (left->get_type())->get_pointer_element_type()->get_type_id();
+    auto right_type = (right->get_type())->get_type_id();
+    Value* right_value;
+    right_value = right;
+    if(left_type < right_type)  //only deal with int x = float y
+        right_value = builder->create_fptosi(right, (left->get_type()->get_pointer_element_type()));
+    else if(left_type > right_type)// float x = int y
+        right_value = builder->create_sitofp(right, (left->get_type()->get_pointer_element_type()));
+    
+    return right_value;
+}
+
 /*
  * use CMinusfBuilder::Scope to construct scopes
  * scope.enter: enter a new scope
@@ -53,7 +67,7 @@ void CminusfBuilder::visit(ASTNum &node) {
     else if(current_type == TYPE_FLOAT)
     {
         current_value = ConstantFP::get(node.f_val, module.get());
-        //std::cout << "FLOAT"<<std::endl;
+
     }
         
 }
@@ -96,8 +110,11 @@ void CminusfBuilder::visit(ASTVarDeclaration &node) {
 
 }
 
+//todo global
+
 void CminusfBuilder::visit(ASTFunDeclaration &node) { 
     LOG(INFO) << "FunDeclaration";
+    
     std::vector<Type*> Params;
     for(auto param: node.params){
         if(param->isarray){
@@ -171,9 +188,15 @@ void CminusfBuilder::visit(ASTFunDeclaration &node) {
     // allocate return_alloca it's a global value
     if(node.type == TYPE_INT){
         return_alloca = builder->create_alloca(Int32Type);
+        //fun_return_type = return_alloca->get_type()->get_type_id();
     }else if(node.type == TYPE_FLOAT){
         return_alloca = builder->create_alloca(FloatType);
+        //fun_return_type = return_alloca->get_type()->get_type_id();
     }
+    
+    
+    //auto backup_fun_type = fun_return_type;
+    
     // visit the compound_stmt and store the ret value in the return_alloca
     node.compound_stmt->accept(*this);
     std::cout<<'1'<<std::endl;
@@ -189,6 +212,7 @@ void CminusfBuilder::visit(ASTFunDeclaration &node) {
     
     // exit the scope of this function
     scope.exit();
+    //fun_return_type = backup_fun_type;
 }
 
 void CminusfBuilder::visit(ASTParam &node) {
@@ -314,6 +338,7 @@ void CminusfBuilder::visit(ASTReturnStmt &node) {
         node.expression->accept(*this);
         // global value, seted in accept()
         auto ret_var = current_value;
+        ret_var = CastRightValue(return_alloca, ret_var, builder);
         builder->create_ret(ret_var);
     }else{ // return-stmt->return;
             ;
@@ -354,6 +379,7 @@ void CminusfBuilder::visit(ASTVar &node) {
 //2. (int) return (float)a
 //3. fun(int) but use with fun(float)
 //4. (int) a op (float) b
+//5. (int) = (float)fun()
 
 //todo test a[4] = a[3]
 
@@ -364,32 +390,19 @@ void CminusfBuilder::visit(ASTAssignExpression &node) {
     // assign or call
     Value* left_alloca;
     Value* right_value;
+    
     Value* temp;
 
     node.var->accept(*this); // know the alloca from current_var
     
-    auto left_type = (current_value->get_type())->get_pointer_element_type()->get_type_id();
+    
     left_alloca = current_value; // find the address of the value
     
     node.expression->accept(*this);
-    
-    auto right_type = (current_value->get_type())->get_type_id();
     right_value = current_value;
     //std::cout <<"rightvalue"<<right_value->get_value()<<std::endl;
-
+    right_value = CastRightValue(left_alloca, right_value, builder);
   
-    if(left_type < right_type)  //only deal with int x = float y
-    {
-        right_value = builder->create_fptosi(right_value, (left_alloca->get_type()->get_pointer_element_type()));
-        //auto num_value = ((ConstantFP *)current_value)->get_value();
-        //std::cout <<"num" <<num_value <<std::endl;
-        //right_value = ConstantInt::get( num_value, module.get());
-    }
-    else if(left_type > right_type)// float x = int y
-    {
-        
-        right_value = builder->create_sitofp(right_value, (left_alloca->get_type()->get_pointer_element_type()));
-    }
     builder->create_store(right_value, left_alloca); // store the value in the addression
  }
 //todo:while  return
