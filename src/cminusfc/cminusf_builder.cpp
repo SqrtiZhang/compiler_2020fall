@@ -394,9 +394,9 @@ void CminusfBuilder::visit(ASTVar &node) {
 //1. int a = float b; Finish
 //2. (int) return (float)a; Finish
 //3. fun(int) but use with fun(float) Finish
-//4. (int) a op (float) b
-//    step1 a +-*/ b
-//    step2 a cmp b
+//4. (int) a op (float) 
+//    step1 a +-*/ b; Finish
+//    step2 a cmp b; Finish
 //5. (int) = (float)fun()
 
 //todo test a[4] = a[3]
