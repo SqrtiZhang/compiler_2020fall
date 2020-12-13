@@ -301,6 +301,8 @@ void CminusfBuilder::visit(ASTVar &node) {
         //current_value = builder->create_load(current_value);
         current_value = x;
     }
+    if(this_mode == LOAD)
+        current_value = builder->create_load(current_value);
 }
 
 void CminusfBuilder::visit(ASTAssignExpression &node) {
