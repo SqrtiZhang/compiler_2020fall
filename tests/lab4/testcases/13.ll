@@ -9,23 +9,17 @@ declare void @outputFloat(float)
 
 declare void @neg_idx_except()
 
-define i32 @gcd(i32 %0, i32 %1) {
+define i32 @main() {
 label.entry:
+  %0 = alloca i32
+  %1 = alloca [2 x i32]
   %2 = alloca i32
-  store i32 %0, i32* %2
-  %3 = alloca i32
-  store i32 %1, i32* %3
-  %4 = alloca i32
-  %5 = load i32, i32* %3
-  %6 = icmp eq i32 %5, 0
-  br i1 %6, label %label.trueBB, label %label.falseBB
-label.trueBB:
-  %7 = load i32, i32* %2
+  store i32 1, i32* %2
+  %3 = load i32, i32* %2
+  %4 = getelementptr [2 x i32], [2 x i32]* %1, i32 0, i32 %3
+  %5 = load i32, i32* %2
+  store i32 %5, i32* %4
+  %6 = getelementptr [2 x i32], [2 x i32]* %1, i32 0, i32 1
+  %7 = load i32, i32* %6
   ret i32 %7
-label.falseBB:
-  ret i32 0
-}
-define void @main() {
-label.entry:
-  ret void
 }

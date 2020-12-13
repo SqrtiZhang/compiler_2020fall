@@ -326,13 +326,21 @@ void CminusfBuilder::visit(ASTVar &node) {
     auto this_mode = var_mode;
     //TODO: only imply load on no array
     // var->ID | ID [expression]
+    std::cout<<"var_mode"<<var_mode<<std::endl;
     if (node.expression != nullptr) {
         std::cout << "[]" << std::endl;
         //
         node.expression->accept(*this);
-        auto index = builder->create_load(current_value);
-        auto valueGEP = builder->create_gep(x, {ConstantInt::get(0, module.get()), (ConstantInt*)index});
-        current_value = valueGEP;
+        std::cout<<"type"<<current_value->get_type()->get_type_id()<<std::endl;
+        
+        if(!current_value->get_type()->is_pointer_type())
+            current_value = builder->create_gep(x, {ConstantInt::get(0, module.get()), current_value});
+        else
+        {
+            auto index = builder->create_load(current_value);
+            current_value = builder->create_gep(x, {ConstantInt::get(0, module.get()), index});
+        }
+        
         
     }else{
         // not a array
@@ -362,6 +370,7 @@ void CminusfBuilder::visit(ASTAssignExpression &node) {
     auto right_type = (current_value->get_type())->get_type_id();
     right_value = current_value;
 
+    //todo deal float = int
     if(left_type < right_type)  //only deal with int x = float y
     {
         auto num_value = ((ConstantFP *)current_value)->get_value();
@@ -370,7 +379,7 @@ void CminusfBuilder::visit(ASTAssignExpression &node) {
     }
     builder->create_store(right_value, left_alloca); // store the value in the addression
  }
-
+//todo:while  return
 void CminusfBuilder::visit(ASTSimpleExpression &node) {
     LOG(INFO) << "simpleExpression";
     // simple-expression→additive-expression relop additive-expression 
