@@ -1,9 +1,12 @@
+int test(int a)
+{
+	return a;
+}
+
 int main(void) {
-    float a;
-    int b;
-    b = 1;
-    a = b;
+    float b;
     int c;
-    c = a;
+    b = 2.5;
+    c = test(b);
     return c;
 }

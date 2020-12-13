@@ -38,6 +38,20 @@ Value* CastRightValue(Value* left, Value* right, IRBuilder* builder)
     return right_value;
 }
 
+Value* CastRightValue(Type* left, Value* right, IRBuilder* builder)
+{
+    auto left_type = left->get_type_id();
+    auto right_type = (right->get_type())->get_type_id();
+    Value* right_value;
+    right_value = right;
+    if(left_type < right_type)  //only deal with int x = float y
+        right_value = builder->create_fptosi(right, left);
+    else if(left_type > right_type)// float x = int y
+        right_value = builder->create_sitofp(right, left);
+    
+    return right_value;
+}
+
 /*
  * use CMinusfBuilder::Scope to construct scopes
  * scope.enter: enter a new scope
@@ -376,12 +390,14 @@ void CminusfBuilder::visit(ASTVar &node) {
 
 //todo var cast
 //1. int a = float b; Finish
-//2. (int) return (float)a
+//2. (int) return (float)a; Finish
 //3. fun(int) but use with fun(float)
 //4. (int) a op (float) b
 //5. (int) = (float)fun()
 
 //todo test a[4] = a[3]
+
+//todo test scope
 
 void CminusfBuilder::visit(ASTAssignExpression &node) {
     LOG(INFO) << "assignexpression";
@@ -488,13 +504,23 @@ void CminusfBuilder::visit(ASTCall &node) {
     LOG(INFO) << "call";
     // call->ID ( args )
     auto func = scope.find(node.id);
+    Type* t = func->get_type();
+    auto func_type = static_cast<FunctionType *> (t);
     if(func == nullptr){
         ;
     }else{
         std::vector<Value*> args;
+        
+        std::vector<Type *>::iterator iter;
+        if(func_type->get_num_of_args())
+            iter = func_type->param_begin();
+        std::cout<<"kk"<<func_type->get_num_of_args()<<std::endl;
+        
         for (auto arg: node.args) {
             arg->accept(*this);
-            args.push_back(current_value);
+            std::cout<< (*iter)->get_type_id() <<"type"<<std::endl;
+            args.push_back(CastRightValue((*iter),current_value,builder));
+            iter++;
         }
         current_value = builder->create_call(func, args);
     }
