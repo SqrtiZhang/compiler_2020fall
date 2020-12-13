@@ -26,8 +26,10 @@ enum VarMode {STORE, LOAD} var_mode;
 
 Value* CastRightValue(Value* left, Value* right, IRBuilder* builder)
 {
+    
     auto left_type = (left->get_type())->get_pointer_element_type()->get_type_id();
     auto right_type = (right->get_type())->get_type_id();
+    
     Value* right_value;
     right_value = right;
     if(left_type < right_type)  //only deal with int x = float y
@@ -391,8 +393,10 @@ void CminusfBuilder::visit(ASTVar &node) {
 //todo var cast
 //1. int a = float b; Finish
 //2. (int) return (float)a; Finish
-//3. fun(int) but use with fun(float)
+//3. fun(int) but use with fun(float) Finish
 //4. (int) a op (float) b
+//    step1 a +-*/ b
+//    step2 a cmp b
 //5. (int) = (float)fun()
 
 //todo test a[4] = a[3]
@@ -453,6 +457,7 @@ void CminusfBuilder::visit(ASTSimpleExpression &node) {
     }
        
  }
+//todo find some float examples!
 
 void CminusfBuilder::visit(ASTAdditiveExpression &node) {
     LOG(INFO) << "additiveexpression";
@@ -465,12 +470,30 @@ void CminusfBuilder::visit(ASTAdditiveExpression &node) {
         Value* left = current_value;
         node.term->accept(*this); 
         Value* right = current_value;
-
-        if (node.op == OP_PLUS) {
-            current_value = builder->create_iadd(left, right);
-        } else if (node.op == OP_MINUS) {
-            current_value = builder->create_isub(left, right);
-        } else {
+        auto left_ty = (left->get_type()->get_type_id());
+        auto right_ty = (right->get_type()->get_type_id());   
+        if(node.op == OP_PLUS || node.op == OP_MINUS)
+        {
+            if(left_ty > right_ty)
+                right = CastRightValue(left->get_type(), right, builder);
+            else if(left_ty < right_ty)
+                left = CastRightValue(right->get_type(), left, builder);
+        }
+        if (node.op == OP_PLUS) 
+        {
+            if(left_ty != right_ty)
+                current_value = builder->create_fadd(left, right);
+            else
+                current_value = builder->create_iadd(left, right);
+        } 
+        else if (node.op == OP_MINUS) 
+        {
+            if(left_ty != right_ty)
+                current_value = builder->create_fsub(left, right);
+            else
+                current_value = builder->create_isub(left, right);
+        } 
+        else {
             std::abort();
         }
     }
