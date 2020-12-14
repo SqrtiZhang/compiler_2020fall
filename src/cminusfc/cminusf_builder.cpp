@@ -68,6 +68,18 @@ Value* CastRightValue(Type* left, Value* right, IRBuilder* builder, std::unique_
     return right_value;
 }
 
+int current_number;
+bool want_change_type = false;
+float current_float;
+CminusType current_type;
+
+Function* current_func;
+BasicBlock* current_bb; 
+
+Value* current_var;
+
+Value* return_alloca;
+
 /*
  * use CMinusfBuilder::Scope to construct scopes
  * scope.enter: enter a new scope
