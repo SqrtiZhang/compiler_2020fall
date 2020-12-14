@@ -27,7 +27,7 @@ Value* return_alloca;
 
 enum VarMode {STORE, LOAD} var_mode;
 
-//todo cast array
+//Finish cast array
 /*
 Value* CastRightValue(Value* left, Value* right, IRBuilder* builder)
 {
@@ -82,7 +82,9 @@ void CminusfBuilder::visit(ASTProgram &node) {
     for(auto decl: node.declarations){
         decl->accept(*this);
     }
+    
     scope.exit();
+    std::cout<<"testglobal"<<std::endl;
 }
 
 void CminusfBuilder::visit(ASTNum &node) { 
@@ -127,9 +129,13 @@ void CminusfBuilder::visit(ASTVarDeclaration &node) {
 
     if(scope.in_global())
     {
-        //TODO: verify global
-        auto *global_var = GlobalVariable::create(node.id, module.get(), node_type, false, nullptr);
+        //TODO: verify globa
+        GlobalVariable *global_var;
+        global_var = GlobalVariable::create(node.id, module.get(), node_type, false, ConstantZero::get(node_type, module.get()));
+        
         scope.push(node.id, global_var);
+        
+        
     }
     else
     {
@@ -246,7 +252,7 @@ void CminusfBuilder::visit(ASTFunDeclaration &node) {
 }
 
 void CminusfBuilder::visit(ASTParam &node) {
-    //TODO put the code from funcdeclaration to here
+    //No Need put the code from funcdeclaration to here
  }
 
 void CminusfBuilder::visit(ASTCompoundStmt &node) { 
@@ -353,7 +359,7 @@ void CminusfBuilder::visit(ASTIterationStmt &node) {
     // jump to the cmp bb, it's a loop
     if(builder -> get_insert_block()->get_terminator() == nullptr)
         builder->create_br(cmp_bb);
-    //TODO consider the return-stmt inside the while bb
+    //Finish consider the return-stmt inside the while bb Finish
     // end_bb
     builder->set_insert_point(end_bb);
     current_bb = end_bb;
@@ -499,7 +505,7 @@ void CminusfBuilder::visit(ASTAssignExpression &node) {
                 current_value = builder->create_fcmp_ne(current_value, CONST_FP(0));
         }
  }
-//todo:while  return
+//Finish:while  return
 void CminusfBuilder::visit(ASTSimpleExpression &node) {
     auto this_width = width;
     width = 32;
