@@ -182,7 +182,7 @@ index = CastRightValue(Type::get_int32_type(module.get()), index, builder, modul
 
 #### Var处理
 
-因此我们只能从入口告诉 var 的处理函数：本次访问 var 是想读还是想写。这里有一个专门的全局变量，从 `factor` 进入前设成“读模式”，从 `assign_expression` 的左半部分进入前设成“写模式”，然后在 var 处理函数里获取该变量对应的 alloca；如果是读模式就额外创建一条 `load` 指令并返回；如果是写模式就直接返回该 alloca，以便外层创建 `store` 指令。
+文法是上下文无关的，因此我们只能从入口告诉 var 的处理函数：本次访问 var 是想读还是想写。这里有一个专门的全局变量，从 `factor` 进入前设成“读模式”，从 `assign_expression` 的左半部分进入前设成“写模式”，然后在 var 处理函数里获取该变量对应的 alloca；如果是读模式就额外创建一条 `load` 指令并返回；如果是写模式就直接返回该 alloca，以便外层创建 `store` 指令。
 
 #### return处理
 
