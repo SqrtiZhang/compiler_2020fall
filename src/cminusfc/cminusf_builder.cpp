@@ -128,10 +128,10 @@ void CminusfBuilder::visit(ASTVarDeclaration &node) {
     if(scope.in_global())
     {
         //TODO: verify global
-        auto initializer = nullptr;
-        if(node_type == TYPE_INT)
+        Constant* initializer;
+        if(node.type == TYPE_INT)
             initializer = ConstantZero::get(node_type, module.get());
-        if(node_type == TYPE_FLOAT)
+        if(node.type == TYPE_FLOAT)
             initializer = ConstantZero::get(node_type, module.get());
 
         auto *global_var = GlobalVariable::create(node.id, module.get(), node_type, false, initializer);
