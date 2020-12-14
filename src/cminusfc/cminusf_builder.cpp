@@ -663,7 +663,7 @@ void CminusfBuilder::visit(ASTCall &node) {
         
         for (auto arg: node.args) {
             arg->accept(*this);
-            std::cout<< (*iter)->get_pointer_element_type()->get_type_id() <<"type"<<std::endl;
+            //std::cout<< (*iter)->get_pointer_element_type()->get_type_id() <<"type"<<std::endl;
             args.push_back(CastRightValue((*iter),current_value,builder));
             iter++;
         }
