@@ -68,18 +68,6 @@ Value* CastRightValue(Type* left, Value* right, IRBuilder* builder, std::unique_
     return right_value;
 }
 
-int current_number;
-bool want_change_type = false;
-float current_float;
-CminusType current_type;
-
-Function* current_func;
-BasicBlock* current_bb; 
-
-Value* current_var;
-
-Value* return_alloca;
-
 /*
  * use CMinusfBuilder::Scope to construct scopes
  * scope.enter: enter a new scope
@@ -140,7 +128,13 @@ void CminusfBuilder::visit(ASTVarDeclaration &node) {
     if(scope.in_global())
     {
         //TODO: verify global
-        auto *global_var = GlobalVariable::create(node.id, module.get(), node_type, false, nullptr);
+        auto initializer = nullptr;
+        if(node_type == TYPE_INT)
+            initializer = ConstantZero::get(node_type, module.get());
+        if(node_type == TYPE_FLOAT)
+            initializer = ConstantZero::get(node_type, module.get());
+
+        auto *global_var = GlobalVariable::create(node.id, module.get(), node_type, false, initializer);
         scope.push(node.id, global_var);
     }
     else
