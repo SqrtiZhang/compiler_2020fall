@@ -17,6 +17,7 @@ Value* current_value;
 int current_number;
 float current_float;
 int width;
+int if_count, while_count;
 CminusType current_type;
 
 Function* current_func;
@@ -225,7 +226,7 @@ void CminusfBuilder::visit(ASTFunDeclaration &node) {
     
     
     //auto backup_fun_type = fun_return_type;
-    
+    if_count = while_count = 0;
     // visit the compound_stmt and store the ret value in the return_alloca
     node.compound_stmt->accept(*this);
     std::cout<<'1'<<std::endl;
@@ -279,22 +280,23 @@ void CminusfBuilder::visit(ASTExpressionStmt &node) {
 
 void CminusfBuilder::visit(ASTSelectionStmt &node) { 
     width = 1;
+    if_count ++;
     LOG(INFO) << "SelectionStmt";
     node.expression->accept(*this); // set global value current_value to transfer the value
-    auto trueBB = BasicBlock::create(module.get(), "trueBB", current_func);
+    auto trueBB = BasicBlock::create(module.get(), "trueBB"+std::to_string(if_count), current_func);
     //auto falseBB = BasicBlock::create(module.get(), "falseBB", current_func);
     //auto retBB = BasicBlock::create(module.get(), "retBB", current_func);
     decltype(trueBB) falseBB = nullptr, retBB = nullptr;
     bool need_new_block = false;
     if(node.else_statement != nullptr)
     {
-        falseBB = BasicBlock::create(module.get(), "falseBB", current_func);
+        falseBB = BasicBlock::create(module.get(), "falseBB"+std::to_string(if_count), current_func);
         //retBB = BasicBlock::create(module.get(), "retBB", current_func);
         builder->create_cond_br(current_value, trueBB, falseBB);
     }
     else
     {
-        retBB = BasicBlock::create(module.get(), "retBB", current_func);
+        retBB = BasicBlock::create(module.get(), "retBB"+std::to_string(if_count), current_func);
         builder->create_cond_br(current_value, trueBB, retBB);
         need_new_block = true;
     }
@@ -330,11 +332,12 @@ void CminusfBuilder::visit(ASTSelectionStmt &node) {
 
 void CminusfBuilder::visit(ASTIterationStmt &node) {
     // the iteration-stmt
+    while_count ++;
     LOG(INFO) << "Iterationstmt";
     // create three bb: compare bb, while_body bb, end bb.
-    auto cmp_bb = BasicBlock::create(module.get(), "cmp_bb", current_func);
-    auto while_body_bb = BasicBlock::create(module.get(), "while_body_bb", current_func);
-    auto end_bb = BasicBlock::create(module.get(), "end_bb", current_func);
+    auto cmp_bb = BasicBlock::create(module.get(), "cmp_bb"+std::to_string(while_count), current_func);
+    auto while_body_bb = BasicBlock::create(module.get(), "while_body_bb" + std::to_string(while_count), current_func);
+    auto end_bb = BasicBlock::create(module.get(), "end_bb" + std::to_string(while_count), current_func);
 
     // br to cmp_bb
     builder->create_br(cmp_bb);
