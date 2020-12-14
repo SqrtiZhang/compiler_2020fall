@@ -1,0 +1,18 @@
+int main(void)
+{
+	int i;
+	int a;
+	i = 8;
+	while(i>10)
+	{
+		int aa;
+		a = 9;
+		return 0;
+	}
+	if(i < 2)
+	{
+		return 2;
+		i = 12;
+	}
+	return i;
+}

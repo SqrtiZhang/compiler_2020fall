@@ -1,0 +1,12 @@
+float a[6];
+void foo(void)
+{
+int g;
+g = 9.8;
+	a[0] = g;
+}
+int main(void)
+{
+	foo();
+	return a[0];
+}
