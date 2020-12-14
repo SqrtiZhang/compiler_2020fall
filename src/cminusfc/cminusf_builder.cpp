@@ -129,13 +129,9 @@ void CminusfBuilder::visit(ASTVarDeclaration &node) {
 
     if(scope.in_global())
     {
-        //TODO: verify globa
         GlobalVariable *global_var;
         global_var = GlobalVariable::create(node.id, module.get(), node_type, false, ConstantZero::get(node_type, module.get()));
-        
         scope.push(node.id, global_var);
-        
-        
     }
     else
     {
@@ -307,9 +303,7 @@ void CminusfBuilder::visit(ASTSelectionStmt &node) {
         std::cout <<"TEST"<<std::endl;
         builder->create_br(retBB);
     } 
-   
-    auto t = node.else_statement;
-    std::cout <<"TEST"<<std::endl;
+
     if (node.else_statement != nullptr)
     {
         builder->set_insert_point(falseBB);
@@ -374,11 +368,11 @@ void CminusfBuilder::visit(ASTReturnStmt &node) {
         node.expression->accept(*this);
         // global value, seted in accept()
         auto ret_var = current_value;
-        //std::cout <<return_alloca->get_type()->get_type_id()<<std::endl;
+        std::cout <<"return"<<return_alloca->get_type()->get_type_id()<<std::endl;
         ret_var = CastRightValue(return_alloca->get_type()->get_pointer_element_type(), ret_var, builder, module);
         builder->create_ret(ret_var);
     }else{ // return-stmt->return;
-            ;
+        builder->create_void_ret();
     }
  }
 
