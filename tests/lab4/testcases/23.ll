@@ -15,7 +15,7 @@ label.entry:
   store i32* %0, i32** %1
   %2 = alloca i32
   %3 = load i32*, i32** %1
-  %4 = getelementptr i32, i32* %3, i32 0, i32 0
+  %4 = getelementptr i32, i32* %3, i32 0
   %5 = load i32, i32* %4
   ret i32 %5
 }
@@ -26,11 +26,10 @@ label.entry:
   %2 = getelementptr [10 x i32], [10 x i32]* %1, i32 0, i32 0
   store i32 1, i32* %2
   %3 = getelementptr [10 x i32], [10 x i32]* %1, i32 0, i32 1
-  %4 = load [10 x i32], [10 x i32]* %1
-  %5 = sitofp [10 x i32] %4 to i32*
-  %6 = call i32 @testa(i32* %5)
-  store i32 %6, i32* %3
-  %7 = getelementptr [10 x i32], [10 x i32]* %1, i32 0, i32 1
-  %8 = load i32, i32* %7
-  ret i32 %8
+  %4 = getelementptr [10 x i32], [10 x i32]* %1, i32 0, i32 0
+  %5 = call i32 @testa(i32* %4)
+  store i32 %5, i32* %3
+  %6 = getelementptr [10 x i32], [10 x i32]* %1, i32 0, i32 1
+  %7 = load i32, i32* %6
+  ret i32 %7
 }

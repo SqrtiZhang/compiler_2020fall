@@ -1,11 +1,13 @@
 #include <stdio.h>
+int test(float a[])
+{
+	return a[0];
+}
 int main()
 {
-	int a;int b;int c;int d;
-	int e;
-	c = 5;
-	d = 9;
-	e = (a = b = c + d);
-	printf("%d",e);
+	int b[10];
+	int c;
+	b[0] = 1;
+	printf("%d", test(b));
 	return 0;
 }
