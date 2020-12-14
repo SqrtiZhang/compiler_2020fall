@@ -371,6 +371,8 @@ void CminusfBuilder::visit(ASTVar &node) {
         if(arrty->is_pointer_type() && 
            arrty->get_pointer_element_type()->is_array_type())
             {
+                //std::cout<<current_value->get_type()->get_type_id();
+                current_value = CastRightValue(Type::get_int32_type(module.get()), current_value, builder, module);
                 current_value = builder->create_gep(x, {ConstantInt::get(0, module.get()), current_value});
             } 
         else
@@ -381,6 +383,7 @@ void CminusfBuilder::visit(ASTVar &node) {
             
             //std::cout<<current_value->get_type()->get_type_id()<<std::endl;
             current_value = builder->create_load(x);
+            index = CastRightValue(Type::get_int32_type(module.get()), index, builder, module);
             current_value = builder->create_gep(current_value, {index});
             //std::cout<<current_value->get_type()->get_type_id()<<std::endl;
             //builder->create_store(current_value, current_value);
