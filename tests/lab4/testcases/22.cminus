@@ -1,9 +1,0 @@
-int  main(void)
-{
-	int a;int b;int c;int d;
-	int e;
-	c = 5;
-	d = 9;
-	e = (a = b = c + d);
-	return e;
-}
