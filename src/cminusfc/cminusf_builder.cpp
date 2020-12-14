@@ -358,7 +358,8 @@ void CminusfBuilder::visit(ASTIterationStmt &node) {
     // enter the statement node
     node.statement->accept(*this);
     // jump to the cmp bb, it's a loop
-    builder->create_br(cmp_bb);
+    if(builder -> get_insert_block()->get_terminator() == nullptr)
+        builder->create_br(cmp_bb);
     //TODO consider the return-stmt inside the while bb
     // end_bb
     builder->set_insert_point(end_bb);
