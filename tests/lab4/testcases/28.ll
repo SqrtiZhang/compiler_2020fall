@@ -21,12 +21,16 @@ label.entry:
 label.trueBB1:
   store i32 2, i32* %2
   br label %label.retBB1
+label.falseBB1:
+  br label %label.retBB1
 label.retBB1:
   %5 = load i32, i32* %2
   %6 = icmp ne i32 %5, 0
   br i1 %6, label %label.trueBB2, label %label.retBB2
 label.trueBB2:
   store i32 4, i32* %2
+  br label %label.retBB2
+label.falseBB2:
   br label %label.retBB2
 label.retBB2:
   %7 = load i32, i32* %2

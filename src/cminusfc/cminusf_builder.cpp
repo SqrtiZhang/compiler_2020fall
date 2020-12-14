@@ -284,46 +284,39 @@ void CminusfBuilder::visit(ASTSelectionStmt &node) {
     LOG(INFO) << "SelectionStmt";
     node.expression->accept(*this); // set global value current_value to transfer the value
     auto trueBB = BasicBlock::create(module.get(), "trueBB"+std::to_string(if_count), current_func);
-    //auto falseBB = BasicBlock::create(module.get(), "falseBB", current_func);
-    //auto retBB = BasicBlock::create(module.get(), "retBB", current_func);
-    decltype(trueBB) falseBB = nullptr, retBB = nullptr;
+    auto falseBB = BasicBlock::create(module.get(), "falseBB"+std::to_string(if_count), current_func);
+    auto retBB = BasicBlock::create(module.get(), "retBB"+std::to_string(if_count), current_func);
     bool need_new_block = false;
     if(node.else_statement != nullptr)
-    {
-        falseBB = BasicBlock::create(module.get(), "falseBB"+std::to_string(if_count), current_func);
-        //retBB = BasicBlock::create(module.get(), "retBB", current_func);
         builder->create_cond_br(current_value, trueBB, falseBB);
-    }
     else
-    {
-        retBB = BasicBlock::create(module.get(), "retBB"+std::to_string(if_count), current_func);
         builder->create_cond_br(current_value, trueBB, retBB);
-        need_new_block = true;
-    }
+
 
     builder->set_insert_point(trueBB);
     node.if_statement->accept(*this);
+     
     if(builder->get_insert_block()->get_terminator() == nullptr)
     {
-        need_new_block = true;
+        std::cout <<"TEST"<<std::endl;
         builder->create_br(retBB);
     } 
-    if (node.else_statement != nullptr){
+   
+    auto t = node.else_statement;
+    std::cout <<"TEST"<<std::endl;
+    if (node.else_statement != nullptr)
+    {
         builder->set_insert_point(falseBB);
         node.else_statement->accept(*this);
         if(builder->get_insert_block()->get_terminator() == nullptr)
-        {
-            need_new_block = true;
             builder->create_br(retBB);
-        }
     }
-    if(need_new_block)
+    else
     {
-        if(node.else_statement != nullptr)
-            retBB = BasicBlock::create(module.get(), "retBB", current_func);
-        builder->set_insert_point(retBB);
+        builder->set_insert_point(falseBB);
+        builder->create_br(retBB);
     }
-        
+        builder->set_insert_point(retBB);
 
 }
 
