@@ -1,0 +1,27 @@
+float x[10];
+float foo(float a)
+{
+	a = a + 1;
+	a = a - a;
+	return a;
+}
+
+int fooo(float b)
+{
+	if(b)
+	{return b;}
+	else
+	{return b-1;}
+}
+
+void main(void)
+{
+	float a;
+	int b;
+	a = 1.5;
+	b = x[0];
+	a = a + b;
+	a = foo(a);
+	a = fooo(a);
+	outputFloat(a);
+}

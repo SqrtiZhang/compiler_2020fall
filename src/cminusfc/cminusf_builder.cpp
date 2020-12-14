@@ -625,14 +625,14 @@ void CminusfBuilder::visit(ASTAdditiveExpression &node) {
         }
         if (node.op == OP_PLUS) 
         {
-            if(left_ty != right_ty)
+            if(left_ty != right_ty|| left_ty == 6)
                 current_value = builder->create_fadd(left, right);
             else
                 current_value = builder->create_iadd(left, right);
         } 
         else if (node.op == OP_MINUS) 
         {
-            if(left_ty != right_ty)
+            if(left_ty != right_ty|| left_ty == 6)
                 current_value = builder->create_fsub(left, right);
             else
                 current_value = builder->create_isub(left, right);
@@ -667,14 +667,14 @@ void CminusfBuilder::visit(ASTTerm &node) {
         }
         if (node.op == OP_MUL) 
         {
-            if(left_ty != right_ty)
+            if(left_ty != right_ty|| left_ty == 6)
                 current_value = builder->create_fmul(left, right);
             else
                 current_value = builder->create_imul(left, right);
         } 
         else if (node.op == OP_DIV) 
         {
-            if(left_ty != right_ty)
+            if(left_ty != right_ty || left_ty == 6)
                 current_value = builder->create_fdiv(left, right);
             else
                 current_value = builder->create_isdiv(left, right);
