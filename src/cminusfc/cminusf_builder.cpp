@@ -150,9 +150,19 @@ void CminusfBuilder::visit(ASTFunDeclaration &node) {
     std::vector<Type*> Params;
     for(auto param: node.params){
         if(param->isarray){
-            Params.push_back(PointerType::get_int32_ptr_type(module.get()));
+            std::cout<<"type"<<param->type<<std::endl;
+            if(param->type == CminusType::TYPE_INT)
+                Params.push_back(PointerType::get_int32_ptr_type(module.get()));
+            else
+                Params.push_back(PointerType::get_float_ptr_type(module.get()));
         }else{
-            Params.push_back(Type::get_int32_type(module.get()));
+            if(param->type == CminusType::TYPE_INT)
+                Params.push_back(Type::get_int32_type(module.get()));
+            else if(param->type == CminusType::TYPE_FLOAT)
+                Params.push_back(Type::get_float_type(module.get()));
+            else
+                Params.push_back(Type::get_void_type(module.get()));
+            
         }
     }
     auto Int32Type = Type::get_int32_type(module.get());
