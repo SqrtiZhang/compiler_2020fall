@@ -17,11 +17,11 @@ Value* current_value;
 int current_number;
 float current_float;
 int width;
-int if_count, while_count;
+int if_count, while_count, idx_count;
 CminusType current_type;
 
 Function* current_func;
-BasicBlock* current_bb; 
+BasicBlock* current_bb, *negBB; 
 
 Value* return_alloca;
 
@@ -208,7 +208,8 @@ void CminusfBuilder::visit(ASTFunDeclaration &node) {
     }
     
     //auto backup_fun_type = fun_return_type;
-    if_count = while_count = 0;
+    if_count = while_count = idx_count = 0;
+    negBB = nullptr;
     // visit the compound_stmt and store the ret value in the return_alloca
     node.compound_stmt->accept(*this);
     //std::cout<<'1'<<std::endl;
@@ -370,6 +371,26 @@ void CminusfBuilder::visit(ASTVar &node) {
         if(arrty->is_pointer_type() && 
            arrty->get_pointer_element_type()->is_array_type())
             {
+                //std::cout<<current_value->get_type()->get_type_id();
+                current_value = CastRightValue(Type::get_int32_type(module.get()), current_value, builder, module);
+                
+                if(negBB == nullptr)
+                {
+                    auto cur_insert = builder->get_insert_block();
+                    negBB = BasicBlock::create(module.get(), "negBB", current_func);
+                    builder->set_insert_point(negBB);
+                    std::vector<Value*> arg;
+                    builder->create_call(scope.find("neg_idx_except"),arg);
+                    builder->create_void_ret();
+                    builder -> set_insert_point(cur_insert);
+                    
+                }
+                idx_count ++;
+                auto afternegBB = BasicBlock::create(module.get(), "afternegBB"+std::to_string(idx_count),current_func);
+                auto judge_neg_index_cmp = builder->create_icmp_lt(current_value, ConstantInt::get(0, module.get()));
+                builder->create_cond_br(judge_neg_index_cmp, negBB, afternegBB);
+
+                builder->set_insert_point(afternegBB);
                 current_value = builder->create_gep(x, {ConstantInt::get(0, module.get()), current_value});
             } 
         else
@@ -378,8 +399,29 @@ void CminusfBuilder::visit(ASTVar &node) {
             auto Int32Type = Type::get_int32_type(module.get());
             auto FloatType = Type::get_float_type(module.get());
             
-            //std::cout<<current_value->get_type()->get_type_id()<<std::endl;
+            
             current_value = builder->create_load(x);
+            index = CastRightValue(Type::get_int32_type(module.get()), index, builder, module);
+
+            if(negBB == nullptr)
+                {
+                    auto cur_insert = builder->get_insert_block();
+                    negBB = BasicBlock::create(module.get(), "negBB", current_func);
+                    builder->set_insert_point(negBB);
+                    std::vector<Value*> arg;
+                    builder->create_call(scope.find("neg_idx_except"),arg);
+                    builder->create_void_ret();
+                    builder -> set_insert_point(cur_insert);
+                    
+                }
+            idx_count ++;
+            auto afternegBB = BasicBlock::create(module.get(), "afternegBB"+std::to_string(idx_count),current_func);
+            auto judge_neg_index_cmp = builder->create_icmp_lt(index, ConstantInt::get(0, module.get()));
+            
+            builder->create_cond_br(judge_neg_index_cmp, negBB, afternegBB);
+            //std::cout<<current_value->get_type()->get_type_id()<<std::endl;
+            builder->set_insert_point(afternegBB);
+            
             current_value = builder->create_gep(current_value, {index});
             //std::cout<<current_value->get_type()->get_type_id()<<std::endl;
             //builder->create_store(current_value, current_value);
@@ -547,7 +589,7 @@ void CminusfBuilder::visit(ASTSimpleExpression &node) {
             if(current_value->get_type()->is_float_type())
                 current_value = builder->create_zext(current_value, Type::get_float_type(module.get()));
         }
-        std::cout << std::endl;
+        //std::cout << std::endl;
     }
        
  }
