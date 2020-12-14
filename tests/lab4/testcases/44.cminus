@@ -1,0 +1,11 @@
+int foo(int u[])
+{
+	return u[3.5];
+}
+void main(void)
+{
+	int a[10];
+	a[3] = 3;
+	a[1.6] = foo(a);
+	output(a[1]);
+}
