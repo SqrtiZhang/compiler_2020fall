@@ -28,43 +28,18 @@ Value* return_alloca;
 enum VarMode {STORE, LOAD} var_mode;
 
 //Finish cast array
-/*
-Value* CastRightValue(Value* left, Value* right, IRBuilder* builder)
-{
-    
-    auto left_type = ->get_type_id();
-    auto right_type = (right->get_type())->get_type_id();
-    
-    Value* right_value;
-    right_value = right;
-    if(left_type < right_type)  //only deal with int x = float y
-        right_value = builder->create_fptosi(right, (left->get_type()->get_pointer_element_type()));
-    else if(left_type > right_type)// float x = int y
-        right_value = builder->create_sitofp(right, (left->get_type()->get_pointer_element_type()));
-    
-    return right_value;
-}*/
-
 Value* CastRightValue(Type* left, Value* right, IRBuilder* builder, std::unique_ptr<Module> &module,int w = 32)
 {
     auto left_type = left->get_type_id();
     auto right_type = (right->get_type())->get_type_id();
-    std::cout<<left_type<<right_type<<std::endl;
+    //std::cout<<left_type<<right_type<<std::endl;
     Value* right_value;
     right_value = right;
 
-    if(left_type < right_type)  //only deal with int x = float y
+    if(left_type < right_type)  //deal with int x = float y
         right_value = builder->create_fptosi(right, left);
     else if(left_type > right_type)// float x = int y
         right_value = builder->create_sitofp(right, left);
-    /*else if((left_type == right_type) && (left_type == 2))
-    {
-        if(w ==1 && width == 32)
-            right_value = builder->create_zext(right_value, Type::get_int32_type(module.get()));
-        std::cout << w <<width<<std::endl;
-    }*/
-        
-    
     return right_value;
 }
 
@@ -77,35 +52,26 @@ Value* CastRightValue(Type* left, Value* right, IRBuilder* builder, std::unique_
  */
 
 void CminusfBuilder::visit(ASTProgram &node) {
-    LOG(INFO) << "Program";
-
+    //LOG(INFO) << "Program";
     for(auto decl: node.declarations){
         decl->accept(*this);
     }
-    
     scope.exit();
-    std::cout<<"testglobal"<<std::endl;
+    //std::cout<<"testglobal"<<std::endl;
 }
 
 void CminusfBuilder::visit(ASTNum &node) { 
-    LOG(INFO) << "NUM";
+    //LOG(INFO) << "NUM";
     current_type = node.type;
     if(current_type == TYPE_INT){
-        current_number = node.i_val;
-        
-        current_value = ConstantInt::get(current_number, module.get());
-        
+        current_value = ConstantInt::get(node.i_val, module.get());
     }
     else if(current_type == TYPE_FLOAT)
-    {
         current_value = ConstantFP::get(node.f_val, module.get());
-
-    }
-        
 }
 
 void CminusfBuilder::visit(ASTVarDeclaration &node) { 
-    LOG(INFO) << "VarDeclaration";
+    //LOG(INFO) << "VarDeclaration";
     Type* node_type;
     Type* node_value_type;
 
@@ -119,7 +85,6 @@ void CminusfBuilder::visit(ASTVarDeclaration &node) {
         // when the var is a array
         node.num->accept(*this);
         node_type = ArrayType::get(node_value_type, node.num->i_val);
-        
     }
     else
     {
@@ -138,31 +103,29 @@ void CminusfBuilder::visit(ASTVarDeclaration &node) {
         auto node_alloca = builder->create_alloca(node_type);
         scope.push(node.id, node_alloca);
     }
-    
-
 }
 
-//todo global
-
 void CminusfBuilder::visit(ASTFunDeclaration &node) { 
-    LOG(INFO) << "FunDeclaration";
-    
+    //LOG(INFO) << "FunDeclaration";
     std::vector<Type*> Params;
-    for(auto param: node.params){
-        if(param->isarray){
-            std::cout<<"type"<<param->type<<std::endl;
+    for(auto param: node.params)
+    {
+        if(param->isarray)
+        {
+            //std::cout<<"type"<<param->type<<std::endl;
             if(param->type == CminusType::TYPE_INT)
                 Params.push_back(PointerType::get_int32_ptr_type(module.get()));
             else
                 Params.push_back(PointerType::get_float_ptr_type(module.get()));
-        }else{
+        }
+        else
+        {
             if(param->type == CminusType::TYPE_INT)
                 Params.push_back(Type::get_int32_type(module.get()));
             else if(param->type == CminusType::TYPE_FLOAT)
                 Params.push_back(Type::get_float_type(module.get()));
             else
                 Params.push_back(Type::get_void_type(module.get()));
-            
         }
     }
     auto Int32Type = Type::get_int32_type(module.get());
@@ -191,28 +154,34 @@ void CminusfBuilder::visit(ASTFunDeclaration &node) {
     // enter the scope of this function
     scope.enter();
     // allocate for params
-    // get the 迭代器 也就是形参
     auto arg = Func->arg_begin();
-    for(auto param: node.params){
-        if(arg == Func->arg_end()){
+    for(auto param: node.params)
+    {
+        if(arg == Func->arg_end())
+        {
             // error
             std::cout<<"error"<<std::endl;
         }
 
         if(param->isarray){
-            // 传入的是指针 根据参数的类型来判断。
-            if(param->type == TYPE_INT){
+            // is pointer
+            if(param->type == TYPE_INT)
+            {
                 auto param_var = builder->create_alloca(PointerType::get(Int32Type));
                 scope.push(param->id, param_var);
                 builder->create_store(*arg, param_var);
             }
-            if(param->type == TYPE_FLOAT){
+            if(param->type == TYPE_FLOAT)
+            {
                 auto param_var = builder->create_alloca(PointerType::get(FloatType));
                 scope.push(param->id, param_var);
                 builder->create_store(*arg, param_var);
             }
-        }else{
-            if(param->type == TYPE_INT){
+        }
+        else
+        {
+            if(param->type == TYPE_INT)
+            {
                 auto param_var = builder->create_alloca(Int32Type);
                 scope.push(param->id, param_var);
                 builder->create_store(*arg, param_var);
@@ -223,25 +192,26 @@ void CminusfBuilder::visit(ASTFunDeclaration &node) {
                 builder->create_store(*arg, param_var);
             }
         }
-
         arg++;
     }
 
     // allocate return_alloca it's a global value
-    if(node.type == TYPE_INT){
+    if(node.type == TYPE_INT)
+    {
         return_alloca = builder->create_alloca(Int32Type);
         //fun_return_type = return_alloca->get_type()->get_type_id();
-    }else if(node.type == TYPE_FLOAT){
+    }
+    else if(node.type == TYPE_FLOAT)
+    {
         return_alloca = builder->create_alloca(FloatType);
         //fun_return_type = return_alloca->get_type()->get_type_id();
     }
-    
     
     //auto backup_fun_type = fun_return_type;
     if_count = while_count = 0;
     // visit the compound_stmt and store the ret value in the return_alloca
     node.compound_stmt->accept(*this);
-    std::cout<<'1'<<std::endl;
+    //std::cout<<'1'<<std::endl;
     if(builder->get_insert_block()->get_terminator() == nullptr)
     {
         if(node.type == TYPE_VOID){
@@ -262,7 +232,7 @@ void CminusfBuilder::visit(ASTParam &node) {
  }
 
 void CminusfBuilder::visit(ASTCompoundStmt &node) { 
-    LOG(INFO) << "Compoundstmt";
+    //LOG(INFO) << "Compoundstmt";
     // {}内的变量要有作用域
     scope.enter();
     
@@ -270,20 +240,19 @@ void CminusfBuilder::visit(ASTCompoundStmt &node) {
         decl->accept(*this);
     }
 
-    for(auto stmt: node.statement_list){
+    for(auto stmt: node.statement_list)
+    {
         stmt->accept(*this);
         if(builder->get_insert_block()->get_terminator() != nullptr)
             break;
-
     }
 
     scope.exit();
-
 }
 
 
 void CminusfBuilder::visit(ASTExpressionStmt &node) {
-    LOG(INFO) << "ExpressionStmt";
+    //LOG(INFO) << "ExpressionStmt";
     width = 0;
     if (node.expression != nullptr)
         node.expression->accept(*this);
@@ -293,7 +262,7 @@ void CminusfBuilder::visit(ASTExpressionStmt &node) {
 void CminusfBuilder::visit(ASTSelectionStmt &node) { 
     width = 1;
     if_count ++;
-    LOG(INFO) << "SelectionStmt";
+    //LOG(INFO) << "SelectionStmt";
     node.expression->accept(*this); // set global value current_value to transfer the value
     auto trueBB = BasicBlock::create(module.get(), "trueBB"+std::to_string(if_count), current_func);
     auto falseBB = BasicBlock::create(module.get(), "falseBB"+std::to_string(if_count), current_func);
@@ -310,7 +279,7 @@ void CminusfBuilder::visit(ASTSelectionStmt &node) {
      
     if(builder->get_insert_block()->get_terminator() == nullptr)
     {
-        std::cout <<"TEST"<<std::endl;
+        //std::cout <<"TEST"<<std::endl;
         builder->create_br(retBB);
     } 
     if (node.else_statement != nullptr)
@@ -330,12 +299,11 @@ void CminusfBuilder::visit(ASTSelectionStmt &node) {
 }
 
 
-
-
-void CminusfBuilder::visit(ASTIterationStmt &node) {
+void CminusfBuilder::visit(ASTIterationStmt &node) 
+{
     // the iteration-stmt
     while_count ++;
-    LOG(INFO) << "Iterationstmt";
+    //LOG(INFO) << "Iterationstmt";
     // create three bb: compare bb, while_body bb, end bb.
     auto cmp_bb = BasicBlock::create(module.get(), "cmp_bb"+std::to_string(while_count), current_func);
     auto while_body_bb = BasicBlock::create(module.get(), "while_body_bb" + std::to_string(while_count), current_func);
@@ -370,14 +338,14 @@ void CminusfBuilder::visit(ASTIterationStmt &node) {
  }
 
 void CminusfBuilder::visit(ASTReturnStmt &node) {
-    LOG(INFO) << "returnstmt";
+    //LOG(INFO) << "returnstmt";
     
     if(node.expression){// return-stmt->return expression;
         width = 32;
         node.expression->accept(*this);
         // global value, seted in accept()
         auto ret_var = current_value;
-        std::cout <<"return"<<return_alloca->get_type()->get_type_id()<<std::endl;
+        //std::cout <<"return"<<return_alloca->get_type()->get_type_id()<<std::endl;
         ret_var = CastRightValue(return_alloca->get_type()->get_pointer_element_type(), ret_var, builder, module);
         builder->create_ret(ret_var);
     }else{ // return-stmt->return;
@@ -386,60 +354,40 @@ void CminusfBuilder::visit(ASTReturnStmt &node) {
  }
 
 void CminusfBuilder::visit(ASTVar &node) { 
-    LOG(INFO) << "Var";
+    //LOG(INFO) << "Var";
     
     auto this_mode = var_mode;
     //std::cout<<"var_mode"<<var_mode<<std::endl;
-    if (node.expression != nullptr) {
+    if (node.expression != nullptr) 
+    {
         auto *x = scope.find(node.id); // find the al
-        std::cout << "[]" << std::endl;
+        //std::cout << "[]" << std::endl;
         width = 32;
         node.expression->accept(*this);
         auto arrty = x->get_type();
         var_mode = LOAD;
 
-        
         if(arrty->is_pointer_type() && 
            arrty->get_pointer_element_type()->is_array_type())
             {
-                
-                 current_value = builder->create_gep(x, {ConstantInt::get(0, module.get()), current_value});
-            }
-           
+                current_value = builder->create_gep(x, {ConstantInt::get(0, module.get()), current_value});
+            } 
         else
-       
         {
             auto index = current_value;
             auto Int32Type = Type::get_int32_type(module.get());
             auto FloatType = Type::get_float_type(module.get());
-            /******************Problem  test23*******************************/
-            //current_value= builder->create_gep(x, {ConstantInt::get(0, module.get())});
-            //index = builder->create_load(x);
-
-            std::cout<<current_value->get_type()->get_type_id()<<std::endl;
+            
+            //std::cout<<current_value->get_type()->get_type_id()<<std::endl;
             current_value = builder->create_load(x);
-            current_value = builder->create_gep(current_value, { index});
+            current_value = builder->create_gep(current_value, {index});
             //std::cout<<current_value->get_type()->get_type_id()<<std::endl;
             //builder->create_store(current_value, current_value);
  
         }
-        
-        /*
-        if(!current_value->get_type()->is_pointer_type())
-        {
-            std::cout<<x->get_type()->get_type_id()<<std::endl;
-            current_value = builder->create_gep(x, {ConstantInt::get(0, module.get()), current_value});
-            
-        }
-            
-        else
-        {
-            auto index = builder->create_load(current_value);
-            current_value = builder->create_gep(x, {ConstantInt::get(0, module.get()), index});
-        }
-        std::cout<<"type"<<current_value->get_type()->get_type_id()<<std::endl;
-        */
-    }else{
+    }
+    else
+    {
         current_value = scope.find(node.id); // find the alloca
         // not a array
         //current_value = builder->create_load(current_value);
@@ -453,12 +401,12 @@ void CminusfBuilder::visit(ASTVar &node) {
             }
         }
         
-        std::cout<<current_value->get_type()->get_type_id()<<std::endl;
+        //std::cout<<current_value->get_type()->get_type_id()<<std::endl;
     }
     if(this_mode == LOAD)
     {
         current_value = builder->create_load(current_value);
-        std::cout<<current_value->get_type()->get_type_id()<<std::endl;
+        //std::cout<<current_value->get_type()->get_type_id()<<std::endl;
     }
         
 }
@@ -474,12 +422,12 @@ void CminusfBuilder::visit(ASTVar &node) {
 
 //Finish test a[4] = a[3]; Finish
 
-//todo test scope
+//Finih test scope
 
-//todo add init var
+//Finish add init var
 
 void CminusfBuilder::visit(ASTAssignExpression &node) {
-    LOG(INFO) << "assignexpression";
+    //LOG(INFO) << "assignexpression";
     var_mode = STORE;
     auto this_width = width;
     // expression->var=expression | simple-expression
@@ -496,30 +444,31 @@ void CminusfBuilder::visit(ASTAssignExpression &node) {
     
     node.expression->accept(*this);
     right_value = current_value;
-    std::cout <<"rightvalue"<<right_value->get_type()->get_type_id()<<std::endl;
+    //std::cout <<"rightvalue"<<right_value->get_type()->get_type_id()<<std::endl;
     right_value = CastRightValue(left_alloca->get_type()->get_pointer_element_type(), right_value, builder, module, this_width);
     //std::cout <<"rightvalue"<<std::endl;
     builder->create_store(right_value, left_alloca); // store the value in the addression
     if(this_width == 1)
-        {
-            if(current_value->get_type()->is_integer_type())
-                current_value = builder->create_icmp_ne(current_value, CONST_INT(0));
-            if(current_value->get_type()->is_float_type())
-                current_value = builder->create_fcmp_ne(current_value, CONST_FP(0));
-        }
+    {
+        if(current_value->get_type()->is_integer_type())
+            current_value = builder->create_icmp_ne(current_value, CONST_INT(0));
+        if(current_value->get_type()->is_float_type())
+            current_value = builder->create_fcmp_ne(current_value, CONST_FP(0));
+    }
  }
+
 //Finish:while  return
 void CminusfBuilder::visit(ASTSimpleExpression &node) {
     auto this_width = width;
     width = 32;
-    LOG(INFO) << "simpleExpression";
+    //LOG(INFO) << "simpleExpression";
     // simple-expression→additive-expression relop additive-expression 
     // ∣ additive-expression
     node.additive_expression_l->accept(*this);
     Value* left = current_value;
 
     if (node.additive_expression_r == nullptr) {
-        LOG(DEBUG) << "simpleExpression->additive-expression";
+        //LOG(DEBUG) << "simpleExpression->additive-expression";
         if(this_width == 1)
         {
             if(current_value->get_type()->is_integer_type())
@@ -527,7 +476,9 @@ void CminusfBuilder::visit(ASTSimpleExpression &node) {
             if(current_value->get_type()->is_float_type())
                 current_value = builder->create_fcmp_ne(current_value, CONST_FP(0));
         }
-    } else {
+    }
+    else
+    {
         node.additive_expression_r->accept(*this);
         Value* right = current_value;
 
@@ -600,15 +551,17 @@ void CminusfBuilder::visit(ASTSimpleExpression &node) {
     }
        
  }
-//todo find some float examples!
+
+//Finish find some float examples!
 
 void CminusfBuilder::visit(ASTAdditiveExpression &node) {
-    LOG(INFO) << "additiveexpression";
+    //LOG(INFO) << "additiveexpression";
     // additive-expression→additive-expression addop term ∣ term
     if (node.additive_expression == nullptr) {
-        node.term->accept(*this); 
-        
-    } else {
+        node.term->accept(*this);    
+    }
+    else
+    {
         node.additive_expression->accept(*this);
         Value* left = current_value;
         node.term->accept(*this); 
@@ -624,14 +577,14 @@ void CminusfBuilder::visit(ASTAdditiveExpression &node) {
         }
         if (node.op == OP_PLUS) 
         {
-            if(left_ty != right_ty)
+            if(left_ty != right_ty|| left_ty == 6)
                 current_value = builder->create_fadd(left, right);
             else
                 current_value = builder->create_iadd(left, right);
         } 
         else if (node.op == OP_MINUS) 
         {
-            if(left_ty != right_ty)
+            if(left_ty != right_ty|| left_ty == 6)
                 current_value = builder->create_fsub(left, right);
             else
                 current_value = builder->create_isub(left, right);
@@ -640,17 +593,18 @@ void CminusfBuilder::visit(ASTAdditiveExpression &node) {
             std::abort();
         }
     }
-        
-    
  }
 
-void CminusfBuilder::visit(ASTTerm &node) {
-    LOG(INFO) << "term";
+void CminusfBuilder::visit(ASTTerm &node)
+ {
+    //LOG(INFO) << "term";
     // term→term mulop factor ∣ factor
     var_mode = LOAD;
     if (node.term == nullptr) {
         node.factor->accept(*this);
-    } else {
+    } 
+    else 
+    {
         node.term->accept(*this);
         Value* left = current_value;
         node.factor->accept(*this);
@@ -666,14 +620,14 @@ void CminusfBuilder::visit(ASTTerm &node) {
         }
         if (node.op == OP_MUL) 
         {
-            if(left_ty != right_ty)
+            if(left_ty != right_ty|| left_ty == 6)
                 current_value = builder->create_fmul(left, right);
             else
                 current_value = builder->create_imul(left, right);
         } 
         else if (node.op == OP_DIV) 
         {
-            if(left_ty != right_ty)
+            if(left_ty != right_ty || left_ty == 6)
                 current_value = builder->create_fdiv(left, right);
             else
                 current_value = builder->create_isdiv(left, right);
@@ -686,20 +640,21 @@ void CminusfBuilder::visit(ASTTerm &node) {
  }
 
 void CminusfBuilder::visit(ASTCall &node) {
-    LOG(INFO) << "call";
+    //LOG(INFO) << "call";
     // call->ID ( args )
     auto func = scope.find(node.id);
     Type* t = func->get_type();
     auto func_type = static_cast<FunctionType *> (t);
     if(func == nullptr){
         ;
-    }else{
+    }
+    else
+    {
         std::vector<Value*> args;
-        
         std::vector<Type *>::iterator iter;
         if(func_type->get_num_of_args())
             iter = func_type->param_begin();
-        std::cout<<"kk"<<func_type->get_num_of_args()<<std::endl;
+        //std::cout<<"kk"<<func_type->get_num_of_args()<<std::endl;
         
         for (auto arg: node.args) {
             arg->accept(*this);
