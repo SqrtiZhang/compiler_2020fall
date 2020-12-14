@@ -2,18 +2,30 @@
 
 ## 贡献详述
 
-### 成员1
+### 闫超美
 
-1. ...
+1. 负责第一阶段的开发，初步补全这十六个函数使得能通过助教给的12个cases，设计了current_value、current_func、current_bb这些全局变量。
+2. 主要做了访问FunDeclaration节点时根据函数名字生成函数，然后对参数解析处理。
+3. 访问选择 ASTSelectionStmt节点时生成对应的block
+4. 访问ASTIterationStmt节点时生成cmp_bb、while_body_bb、end_bb等block
+5. returnstmt根据是否有表达式来决定返回值还是void
+6. 访问Var部分，根据是否是数组来更新current_value的值
+7. ASTAssignExpression部分，写了基本的赋值流程，先获得左值，然后存下来，再获得右值，根据类型来传给左值。以及做了最基本的赋值时类型转换
+8. ASTSimpleExpression 做了基本的根据操作符来生成icmp和fcmp的指令
+9. 剩下的ASTAdditiveExpression和ASTTerm以及ASTCall，都将基本功能添加好，使得能生成加法和减法指令、乘法和除法指令、ret指令。
+
+### 张永停
+
+
 
 
 ## 评定结果
 
-|名字|百分比|
-|:-:|:-:|
-|||
-|||
-|||
+|  名字  | 百分比 |
+| :----: | :----: |
+| 闫超美 |  50%   |
+| 张永停 |  50%   |
+|        |        |
 
 百分比相加应当等于100%
 
