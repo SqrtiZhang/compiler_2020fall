@@ -59,19 +59,16 @@ step 6: 将循环入口从CFG图中删除，从而将当前循环破坏掉，从
 ## 思考题
 ### LoopSearch
 1. 循环的入口如何确定？循环的入口的数量可能超过1嘛？
-```txt
+
 先是通过Tarjan算法找到所有的强连通分量，然后对每一个强连通分量，都调用find_loop_base函数，传入强连通分量和reserved集合，对强连通分量中的每个节点，都遍历它的前驱节点，如果有节点的前驱节点不在强连通分量中，则此节点为循环入口，置为base。然后如果通过此次循环找到了base，则返回此base；否则就说明这个强连通分量是一个内层循环，外层循环的base已经被删除，且插入到reserved中，所以要在reserved中继续找，对于reserved集合的每一个节点，都遍历它的所有后继节点，如果此后继节点在当前强连通分量中，则此后继节点为循环入口，赋值给base。循环结束后返回base。
 
 循环入口的数量不会超过1，因为在Tarjan算法中，即traverse函数中，只有当n的index和lowlink相等时才会插入一个强连通分量，而所有node的index是唯一的，所以在一个强连通分量中，循环的入口也是唯一的。
-```
 
 
 
 2. 简述一下算法怎么解决循环嵌套的情况。
 
-```txt
 在run()函数的while (strongly_connected_components(nodes, sccs))循环中，每次都从CFG图nodes中找到强连通分量集合sccs，然后循环调用find_loop_base()找到每个强连通分量的循环入口，存储结果，将此强连通分量中的bb和循环入口的bb组成键值对插入到bb2base中，如果已经存在bb对应键值对，就用当前的循环入口的bb更新bb2base[bb]。最后将此强连通分量的循环入口base从CFG图中删除，并插入到reserved集合中，这一步就是解决嵌套的核心，在下次循环时，又要调用strongly_connected_components()函数，如果原来的循环包含内循环，则在删除循环入口后得到的新的强连通分量就是内层循环，这样再次更新bb2base时内层循环的bb对应的就是内层循环的入口base。如果还有嵌套循环则通过删除循环入口+重新找强连通分量又能够更新对应的bb2base。从而在调用get_inner_loop函数时可以通过bb2base[bb]来先得到此bb对应最内层的循环入口bb，再通过base2loop[bb2base[bb]]得到对应循环。
-```
 
 
 
