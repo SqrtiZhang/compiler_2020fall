@@ -32,6 +32,7 @@ ConstantInt *ConstFolder::compute(
     }
 }
 
+// 整型的cmp指令的常数折叠
 ConstantInt *ConstFolder::compute(
     CmpInst::CmpOp op,
     ConstantInt *value1,
@@ -67,6 +68,7 @@ ConstantInt *ConstFolder::compute(
     }
 }
 
+// 浮点数计算的常数折叠
 ConstantFP *ConstFolder::compute(
     Instruction::OpID op,
     ConstantFP *value1,
@@ -94,6 +96,7 @@ ConstantFP *ConstFolder::compute(
     }
 }
 
+// 浮点数比较的常数折叠
 ConstantInt *ConstFolder::compute(
     CmpInst::CmpOp op,
     ConstantFP *value1,
@@ -127,6 +130,7 @@ ConstantInt *ConstFolder::compute(
         break;
     }
 }
+
 // 用来判断value是否为ConstantFP，如果不是则会返回nullptr
 ConstantFP *cast_constantfp(Value *value)
 {
@@ -156,11 +160,197 @@ ConstantInt *cast_constantint(Value *value)
 
 void ConstPropagation::run()
 {
-    // 从这里开始吧！
 
     auto func_list = m_->get_functions();
     for(auto func : func_list){
+        for(auto bb : func->get_basic_blocks()){
+            // mantain a vector to store the instr which need to be deleted
+            std::vector<Instruction *> Delete_instructions;    
+            globalMap.clear();
+            for(auto instruction : bb->get_instructions()){
 
+                if(instruction->is_add() || instruction->is_sub() || instruction->is_mul() || instruction->is_div() || 
+                    instruction-> is_fadd() || instruction->is_fsub() || instruction->is_fmul() || instruction->is_fdiv() ){
+                        // operands are const int
+                        if(dynamic_cast<ConstantInt*>(instruction->get_operand(0)) && dynamic_cast<ConstantInt*>(instruction->get_operand(1))){
+                            auto left = dynamic_cast<ConstantInt*>(instruction->get_operand(0));
+                            auto right = dynamic_cast<ConstantInt*>(instruction->get_operand(1));
+                            
+                            auto constant = constfold_->compute(instruction->get_instr_type(),left, right);
+                            for(auto ins : instruction->get_use_list()){ // const propagation 
+                                dynamic_cast<User *>(ins.val_)->set_operand(ins.arg_no_, constant);
+                            }
+                            Delete_instructions.push_back(instruction);
+                        }else if(dynamic_cast<ConstantFP*>(instruction->get_operand(0)) && dynamic_cast<ConstantFP*>(instruction->get_operand(1))){
+                            // operands are const float
+                            auto left = dynamic_cast<ConstantFP*>(instruction->get_operand(0));
+                            auto right = dynamic_cast<ConstantFP*>(instruction->get_operand(1));
+                            
+                            auto constant = constfold_->compute(instruction->get_instr_type(),left, right); 
+                            for(auto ins : instruction->get_use_list()){ // const propagation 
+                                dynamic_cast<User *>(ins.val_)->set_operand(ins.arg_no_, constant);
+                            }
+                            Delete_instructions.push_back(instruction);
+                        }
+                    }
 
+                if(instruction->is_cmp()){
+                        if(dynamic_cast<ConstantInt*>(instruction->get_operand(0)) && dynamic_cast<ConstantInt*>(instruction->get_operand(1))){
+                            auto left = dynamic_cast<ConstantInt*>(instruction->get_operand(0));
+                            auto right = dynamic_cast<ConstantInt*>(instruction->get_operand(1));
+                            
+                            auto constant = constfold_->compute(dynamic_cast<CmpInst *>(instruction)->get_cmp_op(),left, right);
+                            for(auto ins : instruction->get_use_list()){ // const propagation 
+                                dynamic_cast<User *>(ins.val_)->set_operand(ins.arg_no_, constant);
+                            }
+                            Delete_instructions.push_back(instruction);
+                        }
+                }
+
+                if(instruction->is_fcmp()){
+                        if(dynamic_cast<ConstantFP*>(instruction->get_operand(0)) && dynamic_cast<ConstantFP*>(instruction->get_operand(1))){
+                            auto left = dynamic_cast<ConstantFP*>(instruction->get_operand(0));
+                            auto right = dynamic_cast<ConstantFP*>(instruction->get_operand(1));
+                            
+                            auto constant = constfold_->compute(dynamic_cast<CmpInst *>(instruction)->get_cmp_op(),left, right);
+                            for(auto ins : instruction->get_use_list()){ // const propagation 
+                                dynamic_cast<User *>(ins.val_)->set_operand(ins.arg_no_, constant);
+                            }
+                            Delete_instructions.push_back(instruction);
+                        }
+                }
+
+                if(instruction->is_load() || instruction->is_store()){
+                    if(instruction->is_load()){
+                        bool flag = false;
+                        Constant * const_value;
+                        Value* value = instruction->get_operand(0); // get the operand
+                        // if the operand from a instr(GEN Alloca etc...)
+                        auto instrctionValue = dynamic_cast<Instruction *>(value);
+                        if(instrctionValue){ //TODO when is array
+                            ;
+                        }
+                        // if the operand is a global varible
+                        auto globalValue = dynamic_cast<GlobalVariable *>(value);
+                        if(globalValue){
+                            if(globalMap.find(value) != globalMap.end()){
+                                const_value = (globalMap.find(value))->second;
+                                flag = true;
+                            }
+                        }
+
+                        if(flag){
+                            for(auto ins:instruction->get_use_list()){
+                                dynamic_cast<User *>(ins.val_)->set_operand(ins.arg_no_, const_value);
+                            }
+                            Delete_instructions.push_back(instruction);
+                        }
+                    }else{
+                        // instr is store
+                        auto Lvalue = dynamic_cast<StoreInst *>(instruction)->get_lval();
+                        auto Rvalue = dynamic_cast<StoreInst *>(instruction)->get_rval();
+                        auto const_rvalue = dynamic_cast<Constant *> (Rvalue);
+                        if(const_rvalue){
+                            //if store a const to the value
+                            auto globalValue = dynamic_cast<GlobalVariable *>(Lvalue);
+                            if(globalValue){
+                                if(globalMap.find(globalValue) != globalMap.end()){
+                                    // not empty
+                                    globalMap.find(globalValue)->second = const_rvalue;
+
+                                }else{
+                                    // map is empty
+                                    // then insert it
+                                    globalMap.insert({globalValue, const_rvalue});
+                                }
+                            }
+
+                            auto instrctionValue = dynamic_cast<Instruction *>(Lvalue);
+                            if(instrctionValue){
+                                //TODO when is array
+                                ;
+                            }
+                        }
+                    }
+                }
+            }
+            // delete all the ins whose value is a const
+            for(auto delete_ins : Delete_instructions){
+                bb->delete_instr(delete_ins);
+            }
+        }
+    }
+
+    for(auto func:func_list){
+        for(auto bb : func->get_basic_blocks()){
+            builder_->set_insert_point(bb);
+            bool is_BR = false;
+            if(bb->get_terminator()->is_br()) is_BR = true;
+            if(is_BR){
+                auto br = bb->get_terminator();
+                bool is_con_BR = false;
+                if(dynamic_cast<BranchInst *>(br)->is_cond_br()) is_con_BR = true;
+                if(is_con_BR){
+                    // the bool value's type is ConstantInt
+                    // judge the condition is const or not
+                    auto conditon = dynamic_cast<ConstantInt *>(br->get_operand(0));
+                    auto true_bb = br->get_operand(1);
+                    auto false_bb = br->get_operand(2);
+                    bool is_const = false;
+                    if (conditon) is_const = true;
+                    if(is_const){
+                        if(conditon->get_value()){
+
+                            bb->delete_instr(br);
+                            for(auto succ : bb->get_succ_basic_blocks()){
+                                succ->remove_pre_basic_block(bb);
+                                if(succ!=true_bb){
+                                    for(auto ins:succ->get_instructions()){
+                                        if(ins->is_phi()){
+                                            for(int i=0; i<ins->get_num_operand(); i++){
+                                                if(i%2 == 1){
+                                                    if(ins->get_operand(i) == bb){
+                                                        ins->remove_operands(i-1, i);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            auto trueBB = dynamic_cast<BasicBlock *>(true_bb);
+                            builder_->create_br(trueBB);
+                            bb->get_succ_basic_blocks().clear();
+                            bb->add_succ_basic_block(trueBB);                            
+
+                        }else{
+
+                            bb->delete_instr(br);
+                            for(auto succ : bb->get_succ_basic_blocks()){
+                                succ->remove_pre_basic_block(bb);
+                                if(succ!=false_bb){
+                                    for(auto ins:succ->get_instructions()){
+                                        if(ins->is_phi()){
+                                            for(int i=0; i<ins->get_num_operand(); i++){
+                                                if(i%2 == 1){
+                                                    if(ins->get_operand(i) == bb){
+                                                        ins->remove_operands(i-1, i);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            auto falseBB = dynamic_cast<BasicBlock *>(false_bb);
+                            builder_->create_br(falseBB);
+                            bb->get_succ_basic_blocks().clear();
+                            bb->add_succ_basic_block(falseBB);
+
+                        }
+                    }
+                }
+            }
+        }
     }
 }

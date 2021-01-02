@@ -48,8 +48,17 @@ private:
 class ConstPropagation : public Pass
 {
 public:
-    ConstPropagation(Module *m) : Pass(m) {}
+    ConstPropagation(Module *m) : Pass(m) {
+        constfold_ = new ConstFolder(m);
+        builder_ = new IRBuilder(nullptr,m);
+    }
     void run();
+
+private:
+    std::map<Value *, Constant * > globalMap;
+    ConstFolder *constfold_;
+    IRBuilder *builder_;
+
 };
 
 #endif
