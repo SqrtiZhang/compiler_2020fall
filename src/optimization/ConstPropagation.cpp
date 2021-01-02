@@ -179,6 +179,13 @@ void ConstPropagation::run()
                             auto constant = constfold_->compute(instruction->get_instr_type(),left, right);
                             for(auto ins : instruction->get_use_list()){ // const propagation 
                                 dynamic_cast<User *>(ins.val_)->set_operand(ins.arg_no_, constant);
+                                if(dynamic_cast<Instruction *>(ins.val_)->is_si2fp()){
+                                    for(auto x : dynamic_cast<Instruction *>(ins.val_)->get_use_list()){
+                                        auto temp = ConstantFP::get((float)(constant->get_value()),m_);
+                                        dynamic_cast<User *>(x.val_)->set_operand(x.arg_no_, temp);
+                                    }
+                                    Delete_instructions.push_back(dynamic_cast<Instruction *>(ins.val_));
+                                }
                             }
                             Delete_instructions.push_back(instruction);
                         }else if(dynamic_cast<ConstantFP*>(instruction->get_operand(0)) && dynamic_cast<ConstantFP*>(instruction->get_operand(1))){
@@ -292,6 +299,17 @@ void ConstPropagation::run()
                         }
                     }
                 }
+
+                if(instruction->is_si2fp()){
+                    if(cast_constantint(instruction->get_operand(0))){
+                        for(auto x : instruction->get_use_list()){
+                            auto temp = ConstantFP::get((float)(cast_constantint(instruction->get_operand(0))->get_value()),m_);
+                           dynamic_cast<User *>(x.val_)->set_operand(x.arg_no_, temp);
+                        }
+                        Delete_instructions.push_back(instruction);
+                    }
+                }
+
             }
             // delete all the ins whose value is a const
             for(auto delete_ins : Delete_instructions){
