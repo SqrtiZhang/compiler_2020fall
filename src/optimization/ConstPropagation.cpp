@@ -202,6 +202,12 @@ void ConstPropagation::run()
                             auto constant = constfold_->compute(dynamic_cast<CmpInst *>(instruction)->get_cmp_op(),left, right);
                             for(auto ins : instruction->get_use_list()){ // const propagation 
                                 dynamic_cast<User *>(ins.val_)->set_operand(ins.arg_no_, constant);
+                                if(dynamic_cast<Instruction *>(ins.val_)->is_zext()){
+                                    for(auto x : dynamic_cast<Instruction *>(ins.val_)->get_use_list()){
+                                        dynamic_cast<User *>(x.val_)->set_operand(x.arg_no_, constant);
+                                    }
+                                    Delete_instructions.push_back(dynamic_cast<Instruction *>(ins.val_));
+                                }
                             }
                             Delete_instructions.push_back(instruction);
                         }
