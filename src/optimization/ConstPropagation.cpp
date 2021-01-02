@@ -32,6 +32,101 @@ ConstantInt *ConstFolder::compute(
     }
 }
 
+ConstantInt *ConstFolder::compute(
+    CmpInst::CmpOp op,
+    ConstantInt *value1,
+    ConstantInt *value2
+)
+{
+    int c_value1 = value1->get_value();
+    int c_value2 = value2->get_value();
+    switch (op)
+    {
+    case CmpInst::EQ:
+        return ConstantInt::get(c_value1 == c_value2, module_);
+
+        break;
+    case CmpInst::NE:
+        return ConstantInt::get(c_value1 != c_value2, module_);
+        break;
+    case CmpInst::GT:
+        return ConstantInt::get(c_value1 > c_value2, module_);
+        break;
+    case CmpInst::GE:
+        return ConstantInt::get((int)(c_value1 >= c_value2), module_);
+        break;
+    case CmpInst::LT:
+        return ConstantInt::get((int)(c_value1 <= c_value2), module_);;
+        break;
+    case CmpInst::LE:
+        return ConstantInt::get((int)(c_value1 < c_value2), module_);;
+        break;
+    default:
+        return nullptr;
+        break;
+    }
+}
+
+ConstantFP *ConstFolder::compute(
+    Instruction::OpID op,
+    ConstantFP *value1,
+    ConstantFP *value2)
+{
+    float lhs = value1->get_value();
+    float rhs = value2->get_value();
+    switch (op)
+    {
+    case Instruction::fadd:
+        return ConstantFP::get(lhs + rhs, module_);
+        break;
+    case Instruction::fsub:
+        return ConstantFP::get(lhs - rhs, module_);
+        break;
+    case Instruction::fmul:
+        return ConstantFP::get(lhs * rhs, module_);
+        break;
+    case Instruction::fdiv:
+        return ConstantFP::get((float)(lhs / rhs), module_);
+        break;
+    default:
+        return nullptr;
+        break;
+    }
+}
+
+ConstantInt *ConstFolder::compute(
+    CmpInst::CmpOp op,
+    ConstantFP *value1,
+    ConstantFP *value2)
+{
+    float c_value1 = value1->get_value();
+    float c_value2 = value2->get_value();
+    switch (op)
+    {
+    case CmpInst::EQ:
+        return ConstantInt::get(c_value1 == c_value2, module_);
+
+        break;
+    case CmpInst::NE:
+        return ConstantInt::get(c_value1 != c_value2, module_);
+        break;
+    case CmpInst::GT:
+        return ConstantInt::get(c_value1 > c_value2, module_);
+        break;
+    case CmpInst::GE:
+        return ConstantInt::get((int)(c_value1 >= c_value2), module_);
+        break;
+    case CmpInst::LT:
+        return ConstantInt::get((int)(c_value1 <= c_value2), module_);;
+        break;
+    case CmpInst::LE:
+        return ConstantInt::get((int)(c_value1 < c_value2), module_);;
+        break;
+    default:
+        return nullptr;
+        break;
+    }
+}
 // 用来判断value是否为ConstantFP，如果不是则会返回nullptr
 ConstantFP *cast_constantfp(Value *value)
 {
@@ -62,4 +157,10 @@ ConstantInt *cast_constantint(Value *value)
 void ConstPropagation::run()
 {
     // 从这里开始吧！
+
+    auto func_list = m_->get_functions();
+    for(auto func : func_list){
+
+
+    }
 }

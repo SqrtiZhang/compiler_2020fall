@@ -27,6 +27,20 @@ public:
         ConstantInt *value1,
         ConstantInt *value2);
     // ...
+    ConstantInt *compute(
+        CmpInst::CmpOp op,
+        ConstantInt *value1,
+        ConstantInt *value2);
+        
+    ConstantFP *compute(
+        Instruction::OpID op,
+        ConstantFP *value1,
+        ConstantFP *value2);
+
+    ConstantInt *compute(
+        CmpInst::CmpOp op,
+        ConstantFP *value1,
+        ConstantFP *value2);
 private:
     Module *module_;
 };
