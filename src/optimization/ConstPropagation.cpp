@@ -160,7 +160,8 @@ ConstantInt *cast_constantint(Value *value)
 
 void ConstPropagation::run()
 {
-
+    constfold_ = new ConstFolder(m_);
+    builder_ = new IRBuilder(nullptr,m_);
     auto func_list = m_->get_functions();
     for(auto func : func_list){
         for(auto bb : func->get_basic_blocks()){

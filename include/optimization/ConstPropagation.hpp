@@ -49,8 +49,6 @@ class ConstPropagation : public Pass
 {
 public:
     ConstPropagation(Module *m) : Pass(m) {
-        constfold_ = new ConstFolder(m);
-        builder_ = new IRBuilder(nullptr,m);
     }
     void run();
 
