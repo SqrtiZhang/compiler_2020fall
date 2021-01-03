@@ -172,9 +172,9 @@ void ConstPropagation::run()
                 if(instruction->is_add() || instruction->is_sub() || instruction->is_mul() || instruction->is_div() || 
                     instruction-> is_fadd() || instruction->is_fsub() || instruction->is_fmul() || instruction->is_fdiv() ){
                         // operands are const int
-                        if(dynamic_cast<ConstantInt*>(instruction->get_operand(0)) && dynamic_cast<ConstantInt*>(instruction->get_operand(1))){
-                            auto left = dynamic_cast<ConstantInt*>(instruction->get_operand(0));
-                            auto right = dynamic_cast<ConstantInt*>(instruction->get_operand(1));
+                        if(cast_constantint(instruction->get_operand(0)) && cast_constantint(instruction->get_operand(1))){
+                            auto left = cast_constantint(instruction->get_operand(0));
+                            auto right = cast_constantint(instruction->get_operand(1));
                             
                             auto constant = constfold_->compute(instruction->get_instr_type(),left, right);
                             for(auto ins : instruction->get_use_list()){ // const propagation 
@@ -188,10 +188,10 @@ void ConstPropagation::run()
                                 }
                             }
                             Delete_instructions.push_back(instruction);
-                        }else if(dynamic_cast<ConstantFP*>(instruction->get_operand(0)) && dynamic_cast<ConstantFP*>(instruction->get_operand(1))){
+                        }else if(cast_constantfp(instruction->get_operand(0)) && cast_constantfp(instruction->get_operand(1))){
                             // operands are const float
-                            auto left = dynamic_cast<ConstantFP*>(instruction->get_operand(0));
-                            auto right = dynamic_cast<ConstantFP*>(instruction->get_operand(1));
+                            auto left = cast_constantfp(instruction->get_operand(0));
+                            auto right = cast_constantfp(instruction->get_operand(1));
                             
                             auto constant = constfold_->compute(instruction->get_instr_type(),left, right); 
                             for(auto ins : instruction->get_use_list()){ // const propagation 
@@ -209,9 +209,9 @@ void ConstPropagation::run()
                     }
 
                 if(instruction->is_cmp()){
-                        if(dynamic_cast<ConstantInt*>(instruction->get_operand(0)) && dynamic_cast<ConstantInt*>(instruction->get_operand(1))){
-                            auto left = dynamic_cast<ConstantInt*>(instruction->get_operand(0));
-                            auto right = dynamic_cast<ConstantInt*>(instruction->get_operand(1));
+                        if(cast_constantint(instruction->get_operand(0)) && cast_constantint(instruction->get_operand(1))){
+                            auto left = cast_constantint(instruction->get_operand(0));
+                            auto right = cast_constantint(instruction->get_operand(1));
                             
                             auto constant = constfold_->compute(dynamic_cast<CmpInst *>(instruction)->get_cmp_op(),left, right);
                             for(auto ins : instruction->get_use_list()){ // const propagation 
@@ -228,9 +228,9 @@ void ConstPropagation::run()
                 }
 
                 if(instruction->is_fcmp()){
-                        if(dynamic_cast<ConstantFP*>(instruction->get_operand(0)) && dynamic_cast<ConstantFP*>(instruction->get_operand(1))){
-                            auto left = dynamic_cast<ConstantFP*>(instruction->get_operand(0));
-                            auto right = dynamic_cast<ConstantFP*>(instruction->get_operand(1));
+                        if(cast_constantfp(instruction->get_operand(0)) && cast_constantfp(instruction->get_operand(1))){
+                            auto left = cast_constantfp(instruction->get_operand(0));
+                            auto right = cast_constantfp(instruction->get_operand(1));
                             
                             auto constant = constfold_->compute(dynamic_cast<CmpInst *>(instruction)->get_cmp_op(),left, right);
                             for(auto ins : instruction->get_use_list()){ // const propagation 
@@ -331,9 +331,9 @@ void ConstPropagation::run()
                     // the bool value's type is ConstantInt
                     // judge the condition is const or not
                     auto conditon = dynamic_cast<ConstantInt *>(br->get_operand(0));
+                    bool is_const = false;
                     auto true_bb = br->get_operand(1);
                     auto false_bb = br->get_operand(2);
-                    bool is_const = false;
                     if (conditon) is_const = true;
                     if(is_const){
                         if(conditon->get_value()){
