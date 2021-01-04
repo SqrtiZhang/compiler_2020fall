@@ -71,7 +71,21 @@ void LoopInvHoist::run()
             
             // hoist the invatiants
             if(Invs.size()){
-                ;
+                auto base = loop_searcher.get_loop_base(cur_loop);
+                auto pre_bases = base->get_pre_basic_blocks();
+                BasicBlock * pre_base;
+                for(auto Pre_B : pre_bases){
+                    pre_base = Pre_B;
+                    if(cur_loop->find(Pre_B) == cur_loop->end()){
+                        break;
+                    }
+                }
+
+                for(auto x=Invs.end()-1;x>=Invs.begin();x--){
+                    pre_base->add_instr_begin(*(x->second)); // insert in prebb
+                    auto temp = x->first->get_instructions();
+                    temp.erase(x->second); // delete in oldbb
+                }
             }
 
             cur_loop = loop_searcher.get_parent_loop(cur_loop);
