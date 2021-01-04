@@ -12,4 +12,7 @@ public:
     LoopInvHoist(Module *m) : Pass(m) {}
 
     void run() override;
+
+private:
+    std::vector< std::pair<BasicBlock *, std::list<Instruction *>::iterator> > Invs;
 };

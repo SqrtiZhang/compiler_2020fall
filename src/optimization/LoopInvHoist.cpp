@@ -10,4 +10,73 @@ void LoopInvHoist::run()
     loop_searcher.run();
 
     // 接下来由你来补充啦！
+    auto x=loop_searcher.begin();
+    while(x != loop_searcher.end()){
+        auto cur_loop = *x;
+        bool is_inner_loop = true;
+        for(auto bb:*cur_loop){
+            if(loop_searcher.get_inner_loop(bb) != cur_loop){
+                is_inner_loop = false;
+            }
+        }
+
+        if(!is_inner_loop){ // when cur_loop has inner_loop just jump it
+            x++;
+            continue;
+        }
+
+        std::unordered_set<Value *> Can_not_be_moved;
+        // from the inner_loop to parent_loop: find invariants and hoist them
+        while(cur_loop != nullptr){
+            Invs.clear();
+            // find invariants
+            bool will_iter = true;
+            for(auto bb:*cur_loop){
+                for(auto instr:bb->get_instructions()){
+                    Can_not_be_moved.insert(instr);
+                }
+            }
+            while(will_iter){
+                will_iter = false;
+                auto loop_set = *cur_loop;
+                for(auto bb: loop_set){
+                    auto instr_ptr = bb->get_instructions().begin();
+                    auto e = bb->get_instructions().end();
+                    for(; instr_ptr != e; instr_ptr++){
+                        auto instr = *instr_ptr;
+                        int cot = 0;
+                        auto over = Can_not_be_moved.end();
+                        if(Can_not_be_moved.find(instr) == over ||
+                            instr->is_ret() || instr->is_call() || instr->is_br() || instr->is_phi() ||
+                          instr->is_cmp() || instr->is_alloca() ) continue;
+
+                        bool is_invariant = true;
+                        for(auto operand : instr->get_operands()){
+                            auto ins = Can_not_be_moved.find(operand);
+                            if(ins != over){
+                                is_invariant = false;
+                            }
+                        }
+
+                        if(is_invariant){
+                            will_iter = true;
+                            cot = 1;
+                            Can_not_be_moved.erase(instr);
+                            Invs.push_back(std::make_pair(bb, instr_ptr));
+                            
+                        }
+                    }
+                }
+            }
+            
+            // hoist the invatiants
+            if(Invs.size()){
+                ;
+            }
+
+            cur_loop = loop_searcher.get_parent_loop(cur_loop);
+        }
+
+        x++;
+    }
 }
