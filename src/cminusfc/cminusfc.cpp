@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
 
     if( mem2reg )
     {
-        PM.add_pass<Mem2Reg>();
+        PM.add_pass<Mem2Reg>(true);
     }
     if( loop_search ){
         PM.add_pass<LoopSearch>();
