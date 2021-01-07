@@ -25,7 +25,7 @@
 
 ### 循环不变式外提
 
-1. 循环不变式外提后插入的位置要在br前，我之前尝试先把br删掉，然后插入后再生成br，可是这样会导致segmentation fault而且一直解决不了，索性换了个方法，直接用add_instr_begin 这个API将指令倒序插入到bb的开头。
+1. 循环不变式外提后插入的位置要在br前，我之前尝试先把br删掉，然后插入后再生成br，可是这样会导致segmentation fault而且一直解决不了，索性换了个方法，直接用add_instr_begin 这个API将指令倒序插入到bb的开头，这样又发现是有大问题的，因为在提出循环不变式到的bb中如果对循环不变式用到的变量有做计算，这样提到bb开头计算结果就会不正确，所以我最后还是改回去了，这次查到了一个api：get_terminator()，而不是像之前那样用循环找，这样先删除br，再插入，再添加br，就不会出现错误了。
 2. 保存循环不变式的容器选择，一开始是用的vector存pair，每个pair是bb*和ins\*对应，然后发现这样在之后外提的时候想要从bb*对应的instr列表里删除这个instr会比较困难，因为有可能会有重合的语句，从而我改成了每个pair时bb和指向ins*的迭代器相对应，这样一来就可以直接通过迭代器去删除对应的语句。
 
 
@@ -328,7 +328,7 @@
 
     ​	然后就是循环不变式的寻找部分，这部分的处理比较简单，首先是将循环的所有bb的所有指令都插入到一个set中，然后再循环判断如果当前指令涉及到的操作数在之前的set中，说明这条指令依赖之前计算得到的值，并非循环不变式，如果没有依赖，就将其添加到循环不变式，并从那个set中删除。循环这样做，就能够找到所有的循环不变式。
 
-    ​	最后是循环不变式的外提，这部分我做的比较简陋，就只是找到loop_base的pre_base,由于内循环有两个pre_base，判断要提到那个bb里只需要看这两个bb是否在loop里，不在的就是我们要提到的bb，然后倒序插入此bb的头部就可以了。
+    ​	最后是循环不变式的外提，这部分我做的比较简陋，就只是找到loop_base的pre_base,由于内循环有两个pre_base，判断要提到那个bb里只需要看这两个bb是否在loop里，不在的就是我们要提到的bb，然后先删掉结束的br，再插入所有的ins，最后再把br加到结尾。
 
     相应代码：
 
@@ -394,12 +394,23 @@
                             break;
                         }
                     }
+                    
+                    auto br = pre_base->get_terminator();
+                    pre_base->delete_instr(br);
     
-                    for(auto x=Invs.end()-1;x>=Invs.begin();x--){
-                        pre_base->add_instr_begin(*(x->second)); // insert in prebb
-                        auto temp = x->first->get_instructions();
-                        temp.erase(x->second); // delete in oldbb
+                    // for(auto x=Invs.end()-1;x>=Invs.begin();x--){
+                    //     pre_base->add_instr_begin(*(x->second)); // insert in prebb
+                    //     auto temp = x->first->get_instructions();
+                    //     temp.erase(x->second); // delete in oldbb
+                    // }
+    
+                    for(auto x : Invs){
+                        pre_base->add_instruction(*(x.second));
+                        auto temp = x.first->get_instructions();
+                        temp.erase(x.second); // delete in oldbb
                     }
+    
+                    pre_base->add_instruction(br);
                 }
     ```
 
