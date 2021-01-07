@@ -7,9 +7,10 @@
 std::map<Value *, std::vector<Value *>> var_val_stack;//全局变量初值提前存入栈中
 
 void Mem2Reg::run()
-{
+{std::cout<<"plll";
     // get info from Dominators
     dominators_ = new Dominators(m_);
+    
     dominators_->run();
     for (auto f : m_->get_functions())
     {

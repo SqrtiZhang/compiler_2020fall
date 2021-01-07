@@ -80,12 +80,23 @@ void LoopInvHoist::run()
                         break;
                     }
                 }
+                
+                auto br = pre_base->get_terminator();
+                pre_base->delete_instr(br);
 
-                for(auto x=Invs.end()-1;x>=Invs.begin();x--){
-                    pre_base->add_instr_begin(*(x->second)); // insert in prebb
-                    auto temp = x->first->get_instructions();
-                    temp.erase(x->second); // delete in oldbb
+                // for(auto x=Invs.end()-1;x>=Invs.begin();x--){
+                //     pre_base->add_instr_begin(*(x->second)); // insert in prebb
+                //     auto temp = x->first->get_instructions();
+                //     temp.erase(x->second); // delete in oldbb
+                // }
+
+                for(auto x : Invs){
+                    pre_base->add_instruction(*(x.second));
+                    auto temp = x.first->get_instructions();
+                    temp.erase(x.second); // delete in oldbb
                 }
+
+                pre_base->add_instruction(br);
             }
 
             cur_loop = loop_searcher.get_parent_loop(cur_loop);

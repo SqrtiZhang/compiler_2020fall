@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
     }
     if( activevars )
     {
-        PM.add_pass<ActiveVars>();
+        PM.add_pass<ActiveVars>(true);
     }
     if( loop_inv_hoist )
     {

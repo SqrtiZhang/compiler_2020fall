@@ -310,6 +310,15 @@ void ConstPropagation::run()
                         Delete_instructions.push_back(instruction);
                     }
                 }
+                if(instruction->is_fp2si()){
+                    if(cast_constantfp(instruction->get_operand(0))){
+                        for(auto x : instruction->get_use_list()){
+                            auto temp = ConstantInt::get((int)(cast_constantfp(instruction->get_operand(0))->get_value()),m_);
+                            dynamic_cast<User *>(x.val_)->set_operand(x.arg_no_, temp);
+                        }
+                        Delete_instructions.push_back(instruction);
+                    }
+                }
 
             }
             // delete all the ins whose value is a const

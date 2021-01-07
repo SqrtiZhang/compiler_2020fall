@@ -2,7 +2,7 @@
 #include "ConstPropagation.hpp"
 
 void ActiveVars::run()
-{
+{std::cout<<"hello"<<std::endl;
     std::ofstream output_active_vars;
     output_active_vars.open("active_vars.json", std::ios::out);
     output_active_vars << "[";
