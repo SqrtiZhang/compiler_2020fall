@@ -318,7 +318,7 @@ void ConstPropagation::run()
                         }
                         Delete_instructions.push_back(instruction);
                     }
-                )
+                }
 
             }
             // delete all the ins whose value is a const
