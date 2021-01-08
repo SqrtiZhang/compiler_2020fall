@@ -32,7 +32,9 @@
 
 ### 活跃变量分析
 
-
+1. 活跃变量的分析主要复杂的地方在于在于数据流方程的改动， 由于phi函数的加入， 原数据流方程$OUT[B] =\cup_{s是B的后继}IN[S]$  需要根据控制流方向来进行相应的改变。这里选择在记录`use`时对于phi指令，记录其第二、四参数（也即控制流）
+2. 一个较为复杂的地方是根据指令来得到`use, def`。由于使用SSA格式，从而我们可以同时研究use, def， 对一条指令，只需要先将左值存入`def`， 就可以直接判断右值是否定过值。在分析`use`时， 需要注意很多指令细节。比如`gep`的参数可为2也可为3, `phi`的参数个数也是两种，同时需要对参数进行判断，如果是常数，则不加入。
+3. 另一需要注意的地方在于， `phi i32 [ %op3, %label10 ], [ undef, %label_entry ]`的第三个参数并不一定是`nullptr`， 因此当不是`nullptr`时，需要对所有左值(包括函数的参数)进行检查以判断phi的第三个参数时候存在
 
 ## 实验设计
 
@@ -584,13 +586,247 @@
 
 * 活跃变量分析
     实现思路：
-    相应的代码：
+    
+    - def, use的设计
+    
+      由于涉及到phi函数需要记录控制流， 从而设计`useB`的类型为`std::map<BasicBlock *, std::set<std::pair<Value*, Value*>>>`， 其中第一个`Value*`存放值， 第二个`Value*`存放phi函数的2/4参数（即block）; 设计`defB`的类型为`std::map<BasicBlock *, std::set< Value*>>`
+    
+    - def, use的计算
+    
+      `def`的计算非常简单，只需要
+    
+      ```c++
+       def.insert(instruction);
+      ```
+    
+      而`use`的计算由于涉及到两个参数就要相对复杂一些， 其实也主要是细心
+    
+      对于`bineray`, 只需要将非常数值存入, 同时需要判断一下为定值, 第二个参数设置为`nullptr`
+    
+      ```c++
+      if(instruction->is_add() || instruction->is_sub() || instruction->is_mul() || instruction->is_div() || instruction-> is_fadd() || instruction->is_fsub() || instruction->is_fmul() || instruction->is_fdiv() ||
+         instruction -> is_cmp() || instruction -> is_fcmp())
+      {
+          if((!cast_constantfp(instruction->get_operand(0))) && (!cast_constantint(instruction->get_operand(0))) && def.find(instruction->get_operand(0)) == def.end())
+              use.insert(std::make_pair<Value*, Value*>(instruction->get_operand(0), nullptr));
+          if((!cast_constantfp(instruction->get_operand(1))) && (!cast_constantint(instruction->get_operand(1))) && def.find(instruction->get_operand(1)) == def.end())
+              use.insert(std::make_pair<Value*, Value*>(instruction->get_operand(1), nullptr));
+      
+      }
+      ```
+    
+      对于`load`， 其只涉及到一个参数，并且不可能是常数
+    
+      ```c++
+      if(instruction -> is_load())
+      {
+          if(def.find(instruction->get_operand(0)) == def.end())
+              use.insert(std::make_pair<Value*, Value*>(instruction->get_operand(0), nullptr));
+      }
+      
+      ```
+    
+      对于`store`， 其实判断和`bineray`是一样的
+    
+      ```c++
+      if(instruction -> is_store())
+      {
+          if((!cast_constantfp(instruction->get_operand(0))) && (!cast_constantint(instruction->get_operand(0))) && def.find(instruction->get_operand(0)) == def.end())
+              use.insert(std::make_pair<Value*, Value*>(instruction->get_operand(0), nullptr));
+          if((!cast_constantfp(instruction->get_operand(1))) && (!cast_constantint(instruction->get_operand(1))) && def.find(instruction->get_operand(1)) == def.end())
+              use.insert(std::make_pair<Value*, Value*>(instruction->get_operand(1), nullptr));
+      }
+      ```
+    
+      `phi`是处理的重点: `phi`函数的var需要判断一下是否还存在， 即， 判断是否还有左值， 这里我们在fun刚开始的地方计算出所有左值存放在`set`里以方便查找
+    
+      ```c++
+      std::set<Value*> all_left_value;
+      for(auto allbb: func->get_basic_blocks())
+      {
+          for(auto allinst: allbb->get_instructions())
+          {
+              all_left_value.insert(allinst);
+          }
+      
+      }
+      
+      for(auto param: func->get_args())
+      {
+          all_left_value.insert(param);
+      }
+      ```
+    
+      如果var存在，那么判断是否定值， 若未定值， 则在插入时同时插入其控制流
+    
+      ```c++
+      if(instruction -> is_phi())
+      {
+          if( (instruction->get_operand(0)!=nullptr)&& (!cast_constantfp(instruction->get_operand(0))) && (!cast_constantint(instruction->get_operand(0))) && def.find(instruction->get_operand(0)) == def.end())
+          {
+              if(all_left_value.find( instruction->get_operand(0)) != all_left_value.end())
+                  use.insert(std::make_pair<Value*, Value*>(instruction->get_operand(0),instruction->get_operand(1)));
+      
+          }
+      
+          if((instruction->get_operand(2)!=nullptr)&&(!cast_constantfp(instruction->get_operand(2))) && (!cast_constantint(instruction->get_operand(2))) && def.find(instruction->get_operand(2)) == def.end())
+          {
+              if(all_left_value.find( instruction->get_operand(2)) != all_left_value.end())
+                  use.insert(std::make_pair<Value*, Value*>(instruction->get_operand(2),instruction->get_operand(3)));
+      
+          }
+      }           
+      ```
+    
+      对于`call`， 其实判断是同上的
+    
+      ```c++
+      if(instruction -> is_call())
+      {
+          for(int i = 1; i < instruction->get_num_operand(); i++)
+          {
+              if((!cast_constantfp(instruction->get_operand(i))) && (!cast_constantint(instruction->get_operand(i))) && def.find(instruction->get_operand(i)) == def.end())
+                  use.insert(std::make_pair<Value*, Value*>(instruction->get_operand(i), nullptr));
+          }
+      }
+      ```
+    
+      `gep`指令也需要注意一下参数个数与位置
+    
+      ```c++
+      if(instruction -> is_gep())
+      {
+          if(instruction->get_num_operand() == 2)
+          {
+              if((!cast_constantfp(instruction->get_operand(0))) && (!cast_constantint(instruction->get_operand(0))) && def.find(instruction->get_operand(0)) == def.end())
+                  use.insert(std::make_pair<Value*, Value*>(instruction->get_operand(0),nullptr));
+              if((!cast_constantfp(instruction->get_operand(1))) && (!cast_constantint(instruction->get_operand(1))) && def.find(instruction->get_operand(1)) == def.end())
+                  use.insert(std::make_pair<Value*, Value*>(instruction->get_operand(0),nullptr));
+          }
+          else if(instruction->get_num_operand() == 3)
+          {
+              if((!cast_constantfp(instruction->get_operand(0))) && (!cast_constantint(instruction->get_operand(0))) && def.find(instruction->get_operand(0)) == def.end())
+                  use.insert(std::make_pair<Value*, Value*>(instruction->get_operand(0),nullptr));
+              if((!cast_constantfp(instruction->get_operand(2))) && (!cast_constantint(instruction->get_operand(2))) && def.find(instruction->get_operand(2)) == def.end())
+                  use.insert(std::make_pair<Value*, Value*>(instruction->get_operand(2),nullptr));
+      
+          }
+      }
+      ```
+    
+      对于`ret`， 需要判断一下是否为`void`， 此外， 对于`br`， 也只需要判断一下是参数个数
+    
+      ```c++
+      if(instruction -> is_zext() || instruction->is_ret())
+      {
+          if((instruction->get_num_operand()>0) && (!cast_constantfp(instruction->get_operand(0))) && (!cast_constantint(instruction->get_operand(0))) && def.find(instruction->get_operand(0)) == def.end())
+              use.insert(std::make_pair<Value*, Value*>(instruction->get_operand(0),nullptr));
+      
+      }
+      
+      if(instruction -> is_br() && instruction -> get_num_operand() == 3)
+      {
+          if((!cast_constantfp(instruction->get_operand(0))) && (!cast_constantint(instruction->get_operand(0))) && def.find(instruction->get_operand(0)) == def.end())
+              use.insert(std::make_pair<Value*, Value*>(instruction->get_operand(0),nullptr));
+      }
+      if(instruction -> is_fp2si() || instruction -> is_si2fp())
+      {
+          if((!cast_constantfp(instruction->get_operand(0))) && (!cast_constantint(instruction->get_operand(0))) && def.find(instruction->get_operand(0)) == def.end())
+              use.insert(std::make_pair<Value*, Value*>(instruction->get_operand(0),nullptr));
+      }
+      ```
+    
+    - live_in llive_out计算
+    
+      由于在记录use的时候记录了控制流，从而只需要在计算的时候判断一下succ的控制流
+    
+      ```c++
+      bool flag = false;
+      
+      while (!flag)
+      {
+          flag = true;
+          for(auto bb : func->get_basic_blocks())
+          {
+      
+              for(auto succbb: bb->get_succ_basic_blocks())
+              {
+      
+                  for(auto temp_in: inTemp[succbb])
+                  {
+      
+                      if(temp_in.second == nullptr)
+                      {
+      
+                          outTemp[bb].insert(temp_in);
+                      }
+                      else if(temp_in.second == bb)
+                      {
+                          outTemp[bb].insert(std::make_pair(temp_in.first, nullptr));
+                      }
+      
+      
+                  }
+      
+              }
+      
+              for(auto use_temp: useB[bb])
+              {
+                  if(inTemp[bb].find(use_temp) == inTemp[bb].end())
+                  {
+                      flag = false;
+      
+                      inTemp[bb].insert(use_temp);
+                  }
+              }
+      
+              for(auto out_temp: outTemp[bb])
+              {
+                  if(defB[bb].find(out_temp.first) == defB[bb].end())
+                  {
+                      if(inTemp[bb].find(out_temp) == inTemp[bb].end())
+                      {
+                          flag = false;
+                          inTemp[bb].insert(out_temp);
+                      }
+                  }
+              }
+          }
+      
+      }
+      ```
+    
+      由于此时结构与live_in, live_out并不一致， 故需要在最后取pair的第一个数值插入live_in
+    
+      ```c++
+      for(auto bb : func->get_basic_blocks())
+      {
+          for (auto in_temp: inTemp[bb])
+          {
+              if(in_temp.first)
+              {
+                  live_in[bb].insert(in_temp.first);    
+              }
+          }
+      
+      
+          for (auto out_temp: outTemp[bb])
+              if(out_temp.first)
+                  live_out[bb].insert(out_temp.first);
+      }
+      ```
+    
+      
 
 ### 实验总结
 
 **闫超美：**
 
 ​	在完成常量传播和循环不变式外提中，体会到了优化对程序性能的影响之巨大，以及学会了很多C++的容器的用法。优化是编译中最有趣也是技巧性最多的一个部分，这让我对此有了深深地理解和感悟。
+
+**张永停**：
+
+​	在完成活跃变量的时候， 对stl的容器有了更深的理解，同时由于一些赋值粘贴的bug导致debug了很久，这让我意识到细心的重要性。
 
 ### 实验反馈 （可选 不会评分）
 
