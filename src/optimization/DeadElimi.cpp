@@ -3,6 +3,28 @@
 void DeadElimi::run()
 {
 	int del_inst = 0;
+	/*
+	auto funcs = this->m_->get_functions();
+	for (auto iter = funcs.begin(); iter != funcs.end();) 
+	{
+		auto func = *iter;
+		std::cout<<func->get_name() <<std::endl;
+		if (func->get_basic_blocks().empty()) 
+		{
+			++iter;
+			continue;
+		}
+		if (func->get_use_list().empty() && (func->get_name() != "main")) 
+		{
+			
+			iter = funcs.erase(iter);
+		} 
+		else
+			++iter;
+  }*/
+
+	get_non_effect_func();
+	
     for (auto &func : this->m_->get_functions())
     {
         worklist.clear();
@@ -40,8 +62,12 @@ bool DeadElimi::is_effect(Instruction *inst)
 		break;
 	case Instruction::call:
 	{
+		
 		auto call = static_cast<CallInst *>(inst);
-		return non_effect_func_list.find(call->get_function()) == non_effect_func_list.end();
+		//std::cout << non_effect_func_list.size()<<"size"<<std::endl;
+		//std::cout << call->print()<<std::endl;
+		//std::cout << call->get_operand(0)->get_name()  <<" "<<(non_effect_func_list.find(call->get_function()) == non_effect_func_list.end())<<"call"<<std::endl;
+		return non_effect_func_list.find(static_cast<Function*>(call->get_operand(0))) == non_effect_func_list.end();
     	break;
 	}
 	default:
@@ -54,6 +80,8 @@ void DeadElimi::get_non_effect_func()
 {
 	for(auto &func: this->m_->get_functions())
 	{
+		//std::cout << non_effect_func_list.size()<<"size"<<std::endl;
+		//std::cout << func->get_name()<<"name"<<std::endl;
 		if(func->get_num_basic_blocks() == 0)
 			continue;
 		bool flag = false;
@@ -72,6 +100,7 @@ void DeadElimi::get_non_effect_func()
 		if(!flag)
 			non_effect_func_list.insert(func);
 	}
+	//std::cout << non_effect_func_list.size()<<"size"<<std::endl;
 }
 
 void DeadElimi::mark(Instruction *inst)
