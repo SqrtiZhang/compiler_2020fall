@@ -6,6 +6,7 @@
 #include "LoopSearch.hpp"
 #include "LoopInvHoist.hpp"
 #include "ActiveVars.hpp"
+#include "DeadElimi.hpp"
 #include "ConstPropagation.hpp"
 #include <iostream>
 #include <fstream>
@@ -24,6 +25,7 @@ int main(int argc, char **argv) {
     bool emit = false;
     bool analyze = false;
     bool mem2reg = false;
+    bool dead_elimi = false;
     bool const_propagation = false;
     bool activevars = false;
     bool loop_inv_hoist = false;
@@ -47,6 +49,8 @@ int main(int argc, char **argv) {
             analyze = true;
         } else if (argv[i] == "-mem2reg"s) {
             mem2reg = true;
+        } else if (argv[i] == "-dead-elimi"s) {
+            dead_elimi = true;
         } else if (argv[i] == "-loop-search"s) {
             loop_search = true;
         } else if (argv[i] == "-loop-inv-hoist"s) {
@@ -112,6 +116,10 @@ int main(int argc, char **argv) {
     if( activevars )
     {
         PM.add_pass<ActiveVars>(true);
+    }
+    if(dead_elimi)
+    {
+        PM.add_pass<DeadElimi>(true);
     }
     if( loop_inv_hoist )
     {

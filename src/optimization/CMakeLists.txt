@@ -5,5 +5,6 @@ add_library(
         LoopSearch.cpp
         ConstPropagation.cpp
         ActiveVars.cpp
+        DeadElimi.cpp
         LoopInvHoist.cpp
 )
