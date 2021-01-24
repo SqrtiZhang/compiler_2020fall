@@ -7,4 +7,5 @@ add_library(
         ActiveVars.cpp
         DeadElimi.cpp
         LoopInvHoist.cpp
+        FuncInline.cpp
 )

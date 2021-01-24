@@ -36,6 +36,7 @@ public:
     std::string get_instr_op_name( Instruction::OpID instr ) { return instr_id2string_[instr]; }
     void set_print_name();
     virtual std::string print();
+    void remove_function(Function *f) { function_list_.remove(f); }
 private:
     std::list<GlobalVariable *> global_list_;   // The Global Variables in the module
     std::list<Function *> function_list_;       // The Functions in the module

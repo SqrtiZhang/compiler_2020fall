@@ -125,6 +125,12 @@ public:
 
     bool isTerminator() { return is_br() || is_ret(); }
 
+
+    virtual std::string print(){return this->get_type()->print() + "%" + this->get_name();}
+    virtual Instruction *copy(BasicBlock *new_bb) {
+    return new Instruction(get_type(), op_id_, num_ops_, new_bb);
+  }
+
 private:
     BasicBlock *parent_;
     OpID op_id_;
@@ -136,6 +142,7 @@ class BinaryInst : public Instruction
 private:
     BinaryInst(Type *ty, OpID id, Value *v1, Value *v2,
                BasicBlock *bb);
+    BinaryInst(Type *ty, OpID id, BasicBlock *bb) : Instruction(ty, id, 2, bb) {}
 
 public:
     // create add instruction, auto insert to bb
@@ -163,6 +170,10 @@ public:
     static BinaryInst *create_fdiv(Value *v1, Value *v2, BasicBlock *bb, Module *m);
 
     virtual std::string print() override;
+    
+    Instruction *copy(BasicBlock *new_bb) override {
+    return new BinaryInst(get_type(), get_instr_type(), new_bb);
+  }
 
 private:
     void assertValid();
@@ -180,10 +191,13 @@ public:
         LT, // <
         LE  // <=
     };
+    
 
 private:
     CmpInst(Type *ty, CmpOp op, Value *lhs, Value *rhs,
             BasicBlock *bb);
+    CmpInst(Type *ty, CmpOp op, BasicBlock *bb)
+      : Instruction(ty, Instruction::cmp, 2, bb), cmp_op_(op) {}
 
 public:
     static CmpInst *create_cmp(CmpOp op, Value *lhs, Value *rhs,
@@ -192,6 +206,9 @@ public:
     CmpOp get_cmp_op() { return cmp_op_; }
 
     virtual std::string print() override;
+    Instruction *copy(BasicBlock *new_bb) override {
+    return new CmpInst(get_type(), cmp_op_, new_bb);
+  }
 
 private:
     CmpOp cmp_op_;
@@ -215,6 +232,8 @@ public:
 private:
     FCmpInst(Type *ty, CmpOp op, Value *lhs, Value *rhs,
              BasicBlock *bb);
+    FCmpInst(Type *ty, CmpOp op, BasicBlock *bb)
+      : Instruction(ty, Instruction::fcmp, 2, bb), cmp_op_(op) {}
 
 public:
     static FCmpInst *create_fcmp(CmpOp op, Value *lhs, Value *rhs,
@@ -223,6 +242,10 @@ public:
     CmpOp get_cmp_op() { return cmp_op_; }
 
     virtual std::string print() override;
+    Instruction *copy(BasicBlock *new_bb) override {
+    return new FCmpInst(get_type(), cmp_op_, new_bb);
+  }
+    
 
 private:
     CmpOp cmp_op_;
@@ -234,12 +257,15 @@ class CallInst : public Instruction
 {
 protected:
     CallInst(Function *func, std::vector<Value *> args, BasicBlock *bb);
-
+    CallInst(Function *func, BasicBlock *bb);
 public:
     static CallInst *create(Function *func, std::vector<Value *> args, BasicBlock *bb);
     FunctionType *get_function_type() const;
 
     virtual std::string print() override;
+    Instruction *copy(BasicBlock *new_bb) override {
+    return new CallInst(get_function(), new_bb);
+  }
 };
 
 class BranchInst : public Instruction
@@ -248,6 +274,8 @@ private:
     BranchInst(Value *cond, BasicBlock *if_true, BasicBlock *if_false,
                BasicBlock *bb);
     BranchInst(BasicBlock *if_true, BasicBlock *bb);
+    BranchInst(Type *ty, unsigned num_ops, BasicBlock *bb)
+      : Instruction(ty, Instruction::br, num_ops, bb) {}
 
 public:
     static BranchInst *create_cond_br(Value *cond, BasicBlock *if_true, BasicBlock *if_false,
@@ -257,6 +285,9 @@ public:
     bool is_cond_br() const;
 
     virtual std::string print() override;
+    Instruction *copy(BasicBlock *new_bb) override {
+    return new BranchInst(get_type(), get_num_operand(), new_bb);
+  }
 };
 
 class ReturnInst : public Instruction
@@ -268,15 +299,22 @@ private:
 public:
     static ReturnInst *create_ret(Value *val, BasicBlock *bb);
     static ReturnInst *create_void_ret(BasicBlock *bb);
+    ReturnInst(Type *ty, unsigned num_ops, BasicBlock *bb)
+      : Instruction(ty, Instruction::ret, num_ops, bb) {}
     bool is_void_ret() const;
 
     virtual std::string print() override;
+    Instruction *copy(BasicBlock *new_bb) override {
+    return new ReturnInst(get_type(), get_num_operand(), new_bb);
+  }
 };
 
 class GetElementPtrInst : public Instruction
 {
 private:
     GetElementPtrInst(Value *ptr, std::vector<Value *> idxs, BasicBlock *bb);
+    GetElementPtrInst(Type *ty, unsigned num_ops, BasicBlock *bb, Type *elem_ty)
+      : Instruction(ty, Instruction::getelementptr, num_ops, bb), element_ty_(elem_ty) {}
 
 public:
     static Type *get_element_type(Value *ptr, std::vector<Value *> idxs);
@@ -284,6 +322,9 @@ public:
     Type *get_element_type() const;
 
     virtual std::string print() override;
+    Instruction *copy(BasicBlock *new_bb) override {
+    return new GetElementPtrInst(get_type(), get_num_operand(), new_bb,
+                                 element_ty_);}
 
 private:
     Type *element_ty_;
@@ -293,6 +334,8 @@ class StoreInst : public Instruction
 {
 private:
     StoreInst(Value *val, Value *ptr, BasicBlock *bb);
+     StoreInst(Type *ty, unsigned num_ops, BasicBlock *bb)
+      : Instruction(ty, Instruction::store, num_ops, bb) {}
 
 public:
     static StoreInst *create_store(Value *val, Value *ptr, BasicBlock *bb);
@@ -301,18 +344,25 @@ public:
     Value *get_lval() { return this->get_operand(1); }
 
     virtual std::string print() override;
+    Instruction *copy(BasicBlock *new_bb) override {
+    return new StoreInst(get_type(), get_num_operand(), new_bb);
+  }
 };
 
 class LoadInst : public Instruction
 {
 private:
     LoadInst(Type *ty, Value *ptr, BasicBlock *bb);
-
+    LoadInst(Type *ty, unsigned num_ops, BasicBlock *bb)
+      : Instruction(ty, Instruction::load, num_ops, bb) {}
 public:
     static LoadInst *create_load(Type *ty, Value *ptr, BasicBlock *bb);
     Value *get_lval() { return this->get_operand(0); }
 
     Type *get_load_type() const;
+    Instruction *copy(BasicBlock *new_bb) override {
+    return new LoadInst(get_type(), get_num_operand(), new_bb);
+  }
 
     virtual std::string print() override;
 };
@@ -321,6 +371,9 @@ class AllocaInst : public Instruction
 {
 private:
     AllocaInst(Type *ty, BasicBlock *bb);
+    AllocaInst(Type *ty, unsigned num_ops, BasicBlock *bb, Type *alloca_ty)
+      : Instruction(ty, Instruction::alloca, num_ops, bb),
+        alloca_ty_(alloca_ty) {}
 
 public:
     static AllocaInst *create_alloca(Type *ty, BasicBlock *bb);
@@ -328,6 +381,9 @@ public:
     Type *get_alloca_type() const;
 
     virtual std::string print() override;
+    Instruction *copy(BasicBlock *new_bb) override {
+    return new AllocaInst(get_type(), get_num_operand(), new_bb, alloca_ty_);
+  }
 
 private:
     Type *alloca_ty_;
@@ -337,6 +393,8 @@ class ZextInst : public Instruction
 {
 private:
     ZextInst(OpID op, Value *val, Type *ty, BasicBlock *bb);
+    ZextInst(Type *ty, OpID op, unsigned num_ops, BasicBlock *bb, Type *dest_ty)
+      : Instruction(ty, op, num_ops, bb), dest_ty_(dest_ty) {}
 
 public:
     static ZextInst *create_zext(Value *val, Type *ty, BasicBlock *bb);
@@ -344,6 +402,12 @@ public:
     Type *get_dest_type() const;
 
     virtual std::string print() override;
+
+    Instruction *copy(BasicBlock *new_bb) override {
+    return new ZextInst(get_type(), get_instr_type(), get_num_operand(), new_bb,
+                        dest_ty_);
+  }
+
 
 private:
     Type *dest_ty_;
@@ -353,6 +417,8 @@ class FpToSiInst : public Instruction
 {
 private:
     FpToSiInst(OpID op, Value *val, Type *ty, BasicBlock *bb);
+    FpToSiInst(Type *ty, OpID op, unsigned num_ops, BasicBlock *bb, Type *dest_ty)
+      : Instruction(ty, op, num_ops, bb), dest_ty_(dest_ty) {}
 
 public:
     static FpToSiInst *create_fptosi(Value *val, Type *ty, BasicBlock *bb);
@@ -360,6 +426,10 @@ public:
     Type *get_dest_type() const;
 
     virtual std::string print() override;
+    Instruction *copy(BasicBlock *new_bb) override {
+    return new FpToSiInst(get_type(), get_instr_type(), get_num_operand(), new_bb,
+                        dest_ty_);
+  }
 
 private:
     Type *dest_ty_;
@@ -369,6 +439,8 @@ class SiToFpInst : public Instruction
 {
 private:
     SiToFpInst(OpID op, Value *val, Type *ty, BasicBlock *bb);
+    SiToFpInst(Type *ty, OpID op, unsigned num_ops, BasicBlock *bb, Type *dest_ty)
+      : Instruction(ty, op, num_ops, bb), dest_ty_(dest_ty) {}
 
 public:
     static SiToFpInst *create_sitofp(Value *val, Type *ty, BasicBlock *bb);
@@ -376,6 +448,10 @@ public:
     Type *get_dest_type() const;
 
     virtual std::string print() override;
+    Instruction *copy(BasicBlock *new_bb) override {
+    return new SiToFpInst(get_type(), get_instr_type(), get_num_operand(), new_bb,
+                        dest_ty_);
+  }
 
 private:
     Type *dest_ty_;
@@ -399,6 +475,9 @@ public:
         this->add_operand(pre_bb);
     }
     virtual std::string print() override;
+    Instruction *copy(BasicBlock *new_bb) override {
+    return new PhiInst(get_type(), get_instr_type(), get_num_operand(), new_bb);
+  }
 };
 
 #endif // SYSYC_INSTRUCTION_H

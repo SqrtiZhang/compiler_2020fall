@@ -8,8 +8,9 @@ BasicBlock::BasicBlock(Module *m, const std::string &name = "",
                       Function *parent = nullptr)
     : Value(Type::get_label_type(m), name), parent_(parent)
 {
-    assert(parent && "currently parent should not be nullptr");
-    parent_->add_basic_block(this);
+    //assert(parent && "currently parent should not be nullptr");
+    if(parent)
+        parent_->add_basic_block(this);
 }
 
 Module *BasicBlock::get_module()

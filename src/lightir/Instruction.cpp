@@ -94,6 +94,8 @@ std::string BinaryInst::print()
     instr_ir += "%";
     instr_ir += this->get_name();
     instr_ir += " = ";
+    //auto test = this->get_parent()->get_module();
+    //std::cout<<"test!!!!"<< (this->get_parent()->get_name())<<std::endl;
     instr_ir += this->get_module()->get_instr_op_name( this->get_instr_type() );
     instr_ir += " ";
     instr_ir += this->get_operand(0)->get_type()->print();
@@ -215,6 +217,10 @@ CallInst::CallInst(Function *func, std::vector<Value *> args, BasicBlock *bb)
         set_operand(i, args[i-1]);
     }
 }
+
+CallInst::CallInst(Function *func, BasicBlock *bb)
+    : Instruction(func->get_return_type(), Instruction::call,
+                  func->get_num_of_args() + 1, bb) {}
 
 CallInst *CallInst::create(Function *func, std::vector<Value *> args, BasicBlock *bb)
 {

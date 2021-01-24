@@ -28,7 +28,7 @@ class PassManager{
         }
         void run(){
             for(auto pass : passes_){
-                std::cout<<passes_.size()<<std::endl;
+                //std::cout<<passes_.size()<<std::endl;
                 pass.first->run();
                 if(pass.second){
                     std::cout<<m_->print();

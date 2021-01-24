@@ -3,25 +3,6 @@
 void DeadElimi::run()
 {
 	int del_inst = 0;
-	/*
-	auto funcs = this->m_->get_functions();
-	for (auto iter = funcs.begin(); iter != funcs.end();) 
-	{
-		auto func = *iter;
-		std::cout<<func->get_name() <<std::endl;
-		if (func->get_basic_blocks().empty()) 
-		{
-			++iter;
-			continue;
-		}
-		if (func->get_use_list().empty() && (func->get_name() != "main")) 
-		{
-			
-			iter = funcs.erase(iter);
-		} 
-		else
-			++iter;
-  }*/
 
 	get_non_effect_func();
 	
@@ -48,7 +29,6 @@ void DeadElimi::run()
     		}
         }
     }
-
 }
 
 bool DeadElimi::is_effect(Instruction *inst)

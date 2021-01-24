@@ -27,6 +27,8 @@ public:
     Function *get_parent() { return parent_; }
     
     Module *get_module();
+    void set_parent(Function *parent) { parent_ = parent; }
+
 
     /****************api about cfg****************/
 

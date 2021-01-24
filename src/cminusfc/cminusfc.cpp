@@ -6,6 +6,7 @@
 #include "LoopSearch.hpp"
 #include "LoopInvHoist.hpp"
 #include "ActiveVars.hpp"
+#include "FuncInline.hpp"
 #include "DeadElimi.hpp"
 #include "ConstPropagation.hpp"
 #include <iostream>
@@ -29,6 +30,7 @@ int main(int argc, char **argv) {
     bool const_propagation = false;
     bool activevars = false;
     bool loop_inv_hoist = false;
+    bool func_inline = false;
     bool loop_search = false;
 
     for (int i = 1;i < argc;++i) {
@@ -59,6 +61,8 @@ int main(int argc, char **argv) {
             const_propagation = true;
         } else if (argv[i] == "-active-vars"s) {
             activevars = true;
+        } else if (argv[i] == "-func-inline"s) {
+            func_inline = true;
         } else {
             if (input_path.empty()) {
                 input_path = argv[i];
@@ -124,6 +128,12 @@ int main(int argc, char **argv) {
     if( loop_inv_hoist )
     {
         PM.add_pass<LoopInvHoist>(true);
+    }
+    if(func_inline)
+    {
+        /*if(!dead_elimi)
+            PM.add_pass<DeadElimi>(true);*/
+        PM.add_pass<FuncInline>(true);
     }
     PM.run();
     
