@@ -1,0 +1,9 @@
+int main(void){
+	int c;
+	if(123.0)
+		c = 1;
+	
+	return c;
+}
+
+

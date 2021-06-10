@@ -1,0 +1,12 @@
+void foo(void)
+{
+	int a;
+	a = 10;
+	
+}
+int main(void)
+{
+	int a;
+	foo();
+	return a;
+}

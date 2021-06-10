@@ -1,19 +1,22 @@
+source_filename = "if.c"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
 
 define dso_local i32 @main() #0 {
-    ; %1指向a
-    %1 = alloca float
-    ; 将浮点数5.55存入 a
-    store float 0x40163851E0000000, float* %1
-    ; %2存a的值然后将a与1.0比较 若a大于1.0 %3为1跳转到4否则跳转到5
-    %2 = load float, float* %1
-    %3 = fcmp ugt float %2, 1.0
-    br i1 %3, label %4,label %5
-
-4:  
-    ; a>1 返回233
-    ret i32 233
-5:
-    ; 返回0
-    ret i32 0
+entry:
+    %a = alloca float, align 4
+    store float 0x40163851E0000000, float* %a, align 4
+    %a.value = load float, float* %a, align 4
+    %cmp = fcmp ogt float %a.value, 1.000000e+00
+    br i1 %cmp, label %if.then, label %if.end
+if.then:
+    %0 = alloca i32, align 4
+    store i32 233, i32* %0, align 4
+    %1 = load i32, i32* %0, align 4
+    ret i32 %1
+if.end:
+    %2 = alloca i32, align 4
+    store i32 0, i32* %2, align 4
+    %3 = load i32, i32* %2, align 4
+    ret i32 %3
 }
-

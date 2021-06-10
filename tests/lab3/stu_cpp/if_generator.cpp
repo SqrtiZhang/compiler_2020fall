@@ -8,51 +8,42 @@
 #include <iostream>
 #include <memory>
 
-#ifdef DEBUG  // 用于调试信息,大家可以在编译过程中通过" -DDEBUG"来开启这一选项
-#define DEBUG_OUTPUT std::cout << __LINE__ << std::endl;  // 输出行号的简单示例
-#else
-#define DEBUG_OUTPUT
-#endif
-
 #define CONST_INT(num) \
     ConstantInt::get(num, module)
 
 #define CONST_FP(num) \
-    ConstantFP::get(num, module) // 得到常数值的表示,方便后面多次用到
+    ConstantFP::get(num, module)
 
-int main(){
-
-    auto module = new Module("if");
+int main()
+{
+    auto module = new Module("If code");
     auto builder = new IRBuilder(nullptr, module);
     Type *Int32Type = Type::get_int32_type(module);
-
-    // main函数
-    auto mainFun = Function::create(FunctionType::get(Int32Type, {}),
-                                  "main", module);
+    Type *FloatType = Type::get_float_type(module);
+    //int main()
+    auto mainFun = Function::create(FunctionType::get(Int32Type, {}),"main", module);
     auto bb = BasicBlock::create(module, "entry", mainFun);
     builder->set_insert_point(bb);
+    //float a = 5.555;
+    auto aAlloca = builder->create_alloca(FloatType);
+    builder->create_store(CONST_FP(5.555), aAlloca); 
+    auto aLoad = builder->create_load(aAlloca);
+    //cmp
+    auto fcmp = builder->create_fcmp_gt(aLoad, CONST_FP(1));
 
-    Type* Floatty = Type::get_float_type(module);
-    auto a = builder->create_alloca(Floatty);
-    builder->create_store(CONST_FP(5.555), a);
-    auto a_value = builder->create_load(a);
-    auto fcmp = builder->create_fcmp_gt(a_value, CONST_FP(1.0));
+    auto trueBB = BasicBlock::create(module, "trueBB", mainFun);
+    auto retBB = BasicBlock::create(module, "retBB", mainFun);
 
-    auto TrueBB = BasicBlock::create(module, "TrueBB", mainFun);
-    auto FalseBB = BasicBlock::create(module, "FalseBB", mainFun);
-    builder->create_cond_br(fcmp, TrueBB, FalseBB);
-
-    // block TrueBB
-    builder->set_insert_point(TrueBB);
+    auto br = builder->create_cond_br(fcmp, trueBB, retBB);
+    //if(a > 1)
+    builder->set_insert_point(trueBB);
+    //return 233;
     builder->create_ret(CONST_INT(233));
-
-    // block FalseBB
-    builder->set_insert_point(FalseBB);
+    //return 0;
+    builder->set_insert_point(retBB);
     builder->create_ret(CONST_INT(0));
 
     std::cout << module->print();
     delete module;
     return 0;
-
-
 }

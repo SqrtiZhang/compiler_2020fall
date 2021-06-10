@@ -1,14 +1,17 @@
-; callee 函数
-define dso_local i32 @callee(i32 %0) #0 {
-    ; 传入的参数%0与2相乘存入%2
-    %2 = mul i32 %0,2
-    ; 返回相乘的结果 
-    ret i32 %2
+; ModuleID = 'fun.c'
+source_filename = "fun.c"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+define dso_local i32 @callee(i32 %a) #0 {
+entry:
+    ;mul = 2 * a
+    %mul = mul nsw i32 2, %a
+    ret i32 %mul
 }
-; main 函数
+
 define dso_local i32 @main() #0 {
-    ; 调用callee函数，传入参数110，返回结果存入%1
-    %1 = call i32 @callee(i32 110)
-    ; 返回调用结果%1
-    ret i32 %1
+entry:
+    %call = call i32 @callee(i32 110)
+    ret i32 %call
 }

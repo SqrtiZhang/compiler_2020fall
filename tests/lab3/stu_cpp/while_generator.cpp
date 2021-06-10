@@ -8,64 +8,55 @@
 #include <iostream>
 #include <memory>
 
-#ifdef DEBUG  // 用于调试信息,大家可以在编译过程中通过" -DDEBUG"来开启这一选项
-#define DEBUG_OUTPUT std::cout << __LINE__ << std::endl;  // 输出行号的简单示例
-#else
-#define DEBUG_OUTPUT
-#endif
-
 #define CONST_INT(num) \
     ConstantInt::get(num, module)
 
 #define CONST_FP(num) \
-    ConstantFP::get(num, module) // 得到常数值的表示,方便后面多次用到
+    ConstantFP::get(num, module)
 
-int main(){
-
-    auto module = new Module("while");
+int main()
+{
+    auto module = new Module("While code");
     auto builder = new IRBuilder(nullptr, module);
     Type *Int32Type = Type::get_int32_type(module);
-
-    // main函数
-    auto mainFun = Function::create(FunctionType::get(Int32Type, {}),
-                                  "main", module);
+    //int main()
+    auto mainFun = Function::create(FunctionType::get(Int32Type, {}),"main", module);
     auto bb = BasicBlock::create(module, "entry", mainFun);
     builder->set_insert_point(bb);
+    //int a, i
+    auto aAlloca = builder->create_alloca(Int32Type);
+    auto iAlloca = builder->create_alloca(Int32Type);
+    //a=10; i=0;
+    builder->create_store(CONST_INT(10), aAlloca);
+    builder->create_store(CONST_INT(0), iAlloca);
 
-    auto a = builder->create_alloca(Int32Type);
-    auto i = builder->create_alloca(Int32Type);
-
-    builder->create_store(CONST_INT(10), a);
-    builder->create_store(CONST_INT(0), i);
-
-    auto label1 = BasicBlock::create(module, "label1", mainFun);
-    auto while_body = BasicBlock::create(module, "while_body", mainFun);
-    auto end = BasicBlock::create(module, "end", mainFun);
-
-    builder->create_br(label1);
-
-    // block label1
-    builder->set_insert_point(label1);
-    auto a_value = builder->create_load(a);
-    auto i_value = builder->create_load(i);
-    auto icmp = builder->create_icmp_lt(i_value, CONST_INT(10));
-    builder->create_cond_br(icmp, while_body, end);
-
-    // block while_body
-    builder->set_insert_point(while_body);
-    auto i_new = builder->create_iadd(i_value, CONST_INT(1));
-    auto a_new = builder->create_iadd(a_value, i_new);
-    builder->create_store(i_new, i);
-    builder->create_store(a_new, a);
-    builder->create_br(label1);
-
-    // block end
-    builder->set_insert_point(end);
-    builder->create_ret(a_value);
+    auto condBB = BasicBlock::create(module, "condBB", mainFun);
+    auto bodyBB = BasicBlock::create(module, "bodyBB", mainFun);
+    auto endBB = BasicBlock::create(module, "endBB", mainFun);
+    //while(i<10)
+    auto br = builder->create_br(condBB);
+    builder->set_insert_point(condBB);
+    auto iLoad = builder->create_load(iAlloca);
+    auto icmp = builder->create_icmp_lt(iLoad, CONST_INT(10));
+    br = builder->create_cond_br(icmp, bodyBB, endBB);
+    //loop
+    builder->set_insert_point(bodyBB);
+    iLoad = builder->create_load(iAlloca);
+    //i++
+    auto add = builder->create_iadd(iLoad, CONST_INT(1));
+    builder->create_store(add, iAlloca);
+    //a=a+i
+    auto aLoad = builder->create_load(aAlloca);
+    iLoad = builder->create_load(iAlloca);
+    add = builder->create_iadd(iLoad, aLoad);
+    builder->create_store(add, aAlloca);
+    br = builder->create_br(condBB);
+    //return a
+    builder->set_insert_point(endBB);
+    aLoad = builder->create_load(aAlloca);
+    builder->create_ret(aLoad);
 
     std::cout << module->print();
     delete module;
     return 0;
-
-
 }

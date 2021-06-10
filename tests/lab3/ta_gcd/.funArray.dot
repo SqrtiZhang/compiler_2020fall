@@ -1,0 +1,10 @@
+digraph "CFG for 'funArray' function" {
+	label="CFG for 'funArray' function";
+
+	Node0x557bfdcb7180 [shape=record,label="{entry|{<s0>T|<s1>F}}"];
+	Node0x557bfdcb7180:s0 -> Node0x557bfdcb7b30;
+	Node0x557bfdcb7180:s1 -> Node0x557bfdcb7be0;
+	Node0x557bfdcb7b30 [shape=record,label="{if.then}"];
+	Node0x557bfdcb7b30 -> Node0x557bfdcb7be0;
+	Node0x557bfdcb7be0 [shape=record,label="{if.end}"];
+}

@@ -1,0 +1,12 @@
+digraph "CFG for 'gcd' function" {
+	label="CFG for 'gcd' function";
+
+	Node0x557bfdcb5a70 [shape=record,label="{entry|{<s0>T|<s1>F}}"];
+	Node0x557bfdcb5a70:s0 -> Node0x557bfdcb64a0;
+	Node0x557bfdcb5a70:s1 -> Node0x557bfdcb6570;
+	Node0x557bfdcb64a0 [shape=record,label="{if.then}"];
+	Node0x557bfdcb64a0 -> Node0x557bfdcb66e0;
+	Node0x557bfdcb6570 [shape=record,label="{if.else}"];
+	Node0x557bfdcb6570 -> Node0x557bfdcb66e0;
+	Node0x557bfdcb66e0 [shape=record,label="{return}"];
+}
